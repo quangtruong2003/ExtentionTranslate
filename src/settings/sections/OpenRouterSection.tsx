@@ -5,10 +5,16 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MESSAGE_TYPES } from "@/shared/constants";
-import type { ExtensionSettings } from "@/shared/types";
+import {
+  getOpenRouterSettingsValidationError,
+  OPENROUTER_MAX_OUTPUT_TOKENS,
+  OPENROUTER_REASONING_MAX_TOKENS,
+  type ExtensionSettings,
+} from "@/shared/types";
 import { SettingRow } from "../SettingRow";
 
 interface OpenRouterSectionProps {
@@ -41,10 +47,43 @@ export function OpenRouterSection({
   onResetSystemPrompt,
 }: OpenRouterSectionProps) {
   const [keyCheck, setKeyCheck] = useState<{ state: KeyCheckState; message?: string }>({ state: "idle" });
+  const [reasoningBudgetInput, setReasoningBudgetInput] = useState(
+    settings.openRouterReasoningMaxTokens === null ? "" : String(settings.openRouterReasoningMaxTokens),
+  );
+  const [maxOutputTokensInput, setMaxOutputTokensInput] = useState(String(settings.openRouterMaxTokens));
 
   useEffect(() => {
     setKeyCheck({ state: "idle" });
   }, [apiKey]);
+
+  useEffect(() => {
+    setReasoningBudgetInput(settings.openRouterReasoningMaxTokens === null ? "" : String(settings.openRouterReasoningMaxTokens));
+    setMaxOutputTokensInput(String(settings.openRouterMaxTokens));
+  }, [settings.openRouterReasoningMaxTokens, settings.openRouterMaxTokens]);
+
+  const parsedReasoningBudget = reasoningBudgetInput.trim() === "" ? null : Number(reasoningBudgetInput);
+  const parsedMaxOutputTokens = Number(maxOutputTokensInput);
+  const tokenValidationError = getOpenRouterSettingsValidationError({
+    openRouterReasoningMaxTokens: parsedReasoningBudget,
+    openRouterMaxTokens: parsedMaxOutputTokens,
+  });
+
+  function updateReasoningBudget(value: string) {
+    setReasoningBudgetInput(value);
+    if (value.trim() === "") {
+      onSettingsChange({ ...settings, openRouterReasoningMaxTokens: null });
+      return;
+    }
+    const parsed = Number(value);
+    if (Number.isInteger(parsed)) onSettingsChange({ ...settings, openRouterReasoningMaxTokens: parsed });
+  }
+
+  function updateMaxOutputTokens(value: string) {
+    setMaxOutputTokensInput(value);
+    if (value.trim() === "") return;
+    const parsed = Number(value);
+    if (Number.isInteger(parsed)) onSettingsChange({ ...settings, openRouterMaxTokens: parsed });
+  }
 
   async function handleCheckKey() {
     const trimmed = apiKey.trim();
@@ -159,6 +198,68 @@ export function OpenRouterSection({
                 onCheckedChange={(openRouterThinkingEnabled) => onSettingsChange({ ...settings, openRouterThinkingEnabled })}
               />
             </SettingRow>
+          </div>
+
+          <div className="space-y-4 border-t pt-5">
+            <SettingRow
+              id="openrouter-reasoning-effort"
+              title="Mức reasoning"
+              description="Chọn mức độ suy luận khi không nhập Reasoning budget chính xác."
+            >
+              <Select
+                value={settings.openRouterReasoningEffort}
+                onValueChange={(openRouterReasoningEffort) => onSettingsChange({
+                  ...settings,
+                  openRouterReasoningEffort: openRouterReasoningEffort as ExtensionSettings["openRouterReasoningEffort"],
+                })}
+              >
+                <SelectTrigger id="openrouter-reasoning-effort" className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="low">Low</SelectItem>
+                  <SelectItem value="medium">Medium</SelectItem>
+                  <SelectItem value="high">High</SelectItem>
+                </SelectContent>
+              </Select>
+            </SettingRow>
+
+            <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="openrouter-reasoning-budget" className="text-sm font-medium">Reasoning budget</Label>
+                <Input
+                  id="openrouter-reasoning-budget"
+                  type="number"
+                  min={OPENROUTER_REASONING_MAX_TOKENS.min}
+                  max={OPENROUTER_REASONING_MAX_TOKENS.max}
+                  step={1}
+                  inputMode="numeric"
+                  value={reasoningBudgetInput}
+                  onChange={(event) => updateReasoningBudget(event.target.value)}
+                  placeholder="Tự động"
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">Để trống để dùng mức reasoning. Phạm vi: 1024–8192 token.</p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="openrouter-max-output-tokens" className="text-sm font-medium">Max output tokens</Label>
+                <Input
+                  id="openrouter-max-output-tokens"
+                  type="number"
+                  min={OPENROUTER_MAX_OUTPUT_TOKENS.min}
+                  max={OPENROUTER_MAX_OUTPUT_TOKENS.max}
+                  step={1}
+                  inputMode="numeric"
+                  value={maxOutputTokensInput}
+                  onChange={(event) => updateMaxOutputTokens(event.target.value)}
+                />
+                <p className="text-xs leading-relaxed text-muted-foreground">Giới hạn tổng output của Hỏi AI. Phạm vi: 512–8192 token.</p>
+              </div>
+            </div>
+
+            {tokenValidationError && (
+              <p role="alert" className="text-xs text-destructive">{tokenValidationError}</p>
+            )}
           </div>
 
           <div className="space-y-2 border-t pt-5">

@@ -77,5 +77,16 @@ assert.match(popupSource, /Gửi ngữ cảnh xung quanh cho AI/);
 assert.match(popupSource, /popup-preview-theme/);
 assert.match(openRouterSource, /className="flex min-w-0 flex-col gap-2 sm:flex-row"/);
 assert.match(openRouterSource, /className="flex flex-wrap items-center justify-between gap-3"/);
+for (const importName of [
+  "Select",
+  "SelectContent",
+  "SelectItem",
+  "SelectTrigger",
+  "SelectValue",
+  "OPENROUTER_MAX_OUTPUT_TOKENS",
+  "OPENROUTER_REASONING_MAX_TOKENS",
+]) {
+  assert.match(openRouterSource, new RegExp(`\\b${importName}\\b`));
+}
 
 console.log("PASS: settings shell exposes responsive navigation, sticky save bar, and all section owners.");

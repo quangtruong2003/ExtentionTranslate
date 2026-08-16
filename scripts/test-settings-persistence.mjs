@@ -26,6 +26,9 @@ for (const field of [
   "openRouterApiKey",
   "openRouterModel",
   "openRouterThinkingEnabled",
+  "openRouterReasoningEffort",
+  "openRouterReasoningMaxTokens",
+  "openRouterMaxTokens",
   "systemPrompt",
 ]) {
   assert.match(payloadSource, new RegExp(`\\b${field}:`));

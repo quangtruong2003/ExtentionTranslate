@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster, toast } from "@/components/ui/sonner";
-import { DEFAULT_SETTINGS, type ExtensionSettings } from "@/shared/types";
+import { DEFAULT_SETTINGS, getOpenRouterSettingsValidationError, type ExtensionSettings } from "@/shared/types";
 import { SettingsSidebar } from "./SettingsSidebar";
 import { SETTINGS_NAVIGATION, type SettingsSectionId } from "./navigation";
 import { AboutSection } from "./sections/AboutSection";
@@ -93,6 +93,9 @@ export function App() {
       openRouterApiKey: apiKey.trim(),
       openRouterModel: model.trim() || DEFAULT_SETTINGS.openRouterModel,
       openRouterThinkingEnabled: settings.openRouterThinkingEnabled,
+      openRouterReasoningEffort: settings.openRouterReasoningEffort,
+      openRouterReasoningMaxTokens: settings.openRouterReasoningMaxTokens,
+      openRouterMaxTokens: settings.openRouterMaxTokens,
       systemPrompt: systemPrompt,
     };
   }
@@ -101,6 +104,7 @@ export function App() {
     const next = composeNext();
     return (Object.keys(next) as Array<keyof ExtensionSettings>).some((key) => next[key] !== baseline[key]);
   })();
+  const settingsValidationError = getOpenRouterSettingsValidationError(settings);
 
   useEffect(() => {
     const root = document.documentElement;
@@ -124,9 +128,15 @@ export function App() {
   }, [isDirty]);
 
   async function handleSave() {
+    const next = composeNext();
+    const validationError = getOpenRouterSettingsValidationError(next);
+    if (validationError) {
+      setSaveState("error");
+      toast.error(validationError);
+      return;
+    }
     setSaveState("saving");
     try {
-      const next = composeNext();
       await sendMessage("SAVE_SETTINGS", next);
       setSettings(next);
       setBaseline(next);
@@ -202,13 +212,13 @@ export function App() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <p role="status" aria-live="polite" className="min-w-0 truncate text-sm text-muted-foreground">
-              {saveState === "saving" ? "Đang lưu thay đổi…" : saveState === "error" ? "Không thể lưu. Vui lòng thử lại." : "Bạn có thay đổi chưa lưu."}
+              {settingsValidationError ?? (saveState === "saving" ? "Đang lưu thay đổi…" : saveState === "error" ? "Không thể lưu. Vui lòng thử lại." : "Bạn có thay đổi chưa lưu.")}
             </p>
             <div className="flex shrink-0 items-center gap-2">
               <Button type="button" variant="ghost" onClick={handleDiscard} disabled={saveState === "saving"}>
                 Hủy thay đổi
               </Button>
-              <Button type="button" onClick={handleSave} disabled={saveState === "saving"}>
+              <Button type="button" onClick={handleSave} disabled={saveState === "saving" || Boolean(settingsValidationError)}>
                 {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
                 {saveState === "saving" ? "Đang lưu…" : "Lưu thay đổi"}
               </Button>
