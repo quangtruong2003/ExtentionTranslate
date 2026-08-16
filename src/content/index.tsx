@@ -1,5 +1,4 @@
 import { createRoot, type Root } from "react-dom/client";
-import { BookOpen } from "lucide-react";
 import { StrictMode, useLayoutEffect, useRef } from "react";
 import { DictionaryPopup, type PopupPhase } from "@/components/dictionary/DictionaryPopup";
 import { getPopupCopy } from "@/components/dictionary/copy";
@@ -151,6 +150,7 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
 }) {
   const buttonRef = useRef<HTMLButtonElement>(null);
   const copy = getPopupCopy(targetLanguage);
+  const projectIconUrl = chrome.runtime.getURL("icons/icon48.png");
 
   useLayoutEffect(() => {
     const button = buttonRef.current;
@@ -216,9 +216,9 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
           selectionTriggerPointerDown = false;
         }}
         onClick={onActivate}
-        className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-primary/60 bg-background text-primary shadow-lg outline-none transition-[transform,box-shadow,background-color] hover:scale-105 hover:bg-primary/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-95"
+        className="inline-flex h-9 w-9 items-center justify-center border-0 bg-transparent p-0 opacity-90 outline-none transition-[transform,opacity] hover:scale-105 hover:opacity-100 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary active:scale-95"
       >
-        <BookOpen className="h-4 w-4" aria-hidden="true" />
+        <img src={projectIconUrl} alt="" aria-hidden="true" draggable={false} className="h-6 w-6 object-contain" />
       </button>
     </div>
   );

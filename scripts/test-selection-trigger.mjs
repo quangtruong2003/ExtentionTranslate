@@ -94,6 +94,15 @@ assert.match(contentSource, /selectionTriggerMode\s*(?:===|==)\s*["']icon["']/);
 assert.match(contentSource, /(?:SelectionTrigger|selectionTrigger|selection-trigger)/);
 assert.match(contentSource, /<button\b[^>]*aria-label=|role=["']button["']/);
 assert.match(contentSource, /onPointerDown=\{[\s\S]*?preventDefault\(\)/, "trigger pointer-down preserves the captured selection");
+assert.match(contentSource, /chrome\.runtime\.getURL\(\s*["']icons\/icon48\.png["']\s*\)/, "trigger uses the project icon asset");
+assert.match(contentSource, /<img\b[\s\S]*?iconUrl|<img\b[\s\S]*?src=\{[^}]*icon/i, "trigger renders the project icon as an image");
+assert.match(contentSource, /className=["'][^"']*\bh-9\s+w-9\b[^"']*["']/, "trigger keeps the 36x36 hit area");
+assert.doesNotMatch(contentSource, /import\s*\{\s*BookOpen\s*\}\s*from\s*["']lucide-react["']/, "trigger no longer uses the Lucide BookOpen icon");
+assert.doesNotMatch(
+  contentSource,
+  /className=["'][^"']*\brounded-full\b[^"']*\bborder\b[^"']*\bbg-background\b[^"']*\bshadow-lg\b[^"']*["']/,
+  "trigger has no circular border, background, or shadow chrome",
+);
 
 const iconBranch = findModeBranch(selectionFlow, "icon");
 assert.match(iconBranch, /(?:render|mount|show|set)[A-Za-z]*(?:Trigger|trigger)/);
