@@ -428,15 +428,15 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   schedulePopupPlacement(info);
   addOutsideListeners();
 
-  if (settings.targetLanguage !== "en") {
-    void browserDictionaryTranslator.warm(settings.targetLanguage);
-  }
   if (shouldAutoAsk && settings.autoAskAIOnPopup && settings.hasOpenRouterApiKey) {
     void handleAskAI({ revealTab: false });
   }
   if (selectionMode.kind === "text") {
     void translateSelectedText(info, selectionMode.sourceText, myId);
     return;
+  }
+  if (settings.targetLanguage !== "en") {
+    void browserDictionaryTranslator.warm(settings.targetLanguage);
   }
   try {
     const res = await sendMessage<{ ok: boolean; payload: LookupResponse }>(MESSAGE_TYPES.DICTIONARY_LOOKUP, {

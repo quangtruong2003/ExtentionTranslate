@@ -36,6 +36,22 @@ assert.deepEqual(classifySelection("Uranium is a radioactive material."), {
   sourceText: "Uranium is a radioactive material.",
 });
 
+assert.deepEqual(classifySelection("铀是一种放射性物质。"), {
+  kind: "text",
+  sourceText: "铀是一种放射性物质。",
+});
+
+assert.deepEqual(classifySelection("放射性物质"), {
+  kind: "text",
+  sourceText: "放射性物质",
+});
+
+assert.deepEqual(classifySelection("铀"), {
+  kind: "word",
+  sourceText: "铀",
+  lookupText: "铀",
+});
+
 assert.deepEqual(classifySelection("First line.\r\nSecond line."), {
   kind: "text",
   sourceText: "First line.\nSecond line.",

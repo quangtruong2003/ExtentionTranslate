@@ -69,7 +69,7 @@ export function DictionaryPopup(props: Props) {
         tabIndex={-1}
         className="flex min-w-0 max-h-[min(680px,calc(100vh-24px))] w-full max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl animate-fade-in"
         role="dialog"
-        aria-label={labels.dialogLabel(word)}
+        aria-label={isTranslationPhase ? labels.translationDialogLabel(word) : labels.dialogLabel(word)}
       >
       {phase.kind === "ready" && (
         <>

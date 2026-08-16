@@ -202,10 +202,39 @@ const emptyTranslator = new BrowserDictionaryTranslator(() => ({
   },
 }));
 
-assert.equal(await emptyTranslator.translateText("hello", "en", "vi"), null);
+await assert.rejects(
+  () => emptyTranslator.translateText("hello", "en", "vi"),
+  /browser translator returned an empty string/,
+);
 assert.equal(emptySessions[0].destroyCalls, 1);
-assert.equal(await emptyTranslator.translateText("hello", "en", "vi"), null);
+await assert.rejects(
+  () => emptyTranslator.translateText("hello", "en", "vi"),
+  /browser translator returned an empty string/,
+);
 assert.equal(emptyCreateCalls, 2);
+
+const ordinaryFailureSession = {
+  async translate() {
+    throw new Error("translator crashed");
+  },
+  destroyCalls: 0,
+  destroy() {
+    this.destroyCalls += 1;
+  },
+};
+const ordinaryFailureTranslator = new BrowserDictionaryTranslator(() => ({
+  async availability() {
+    return "available";
+  },
+  async create() {
+    return ordinaryFailureSession;
+  },
+}));
+await assert.rejects(
+  () => ordinaryFailureTranslator.translateText("hello", "en", "vi"),
+  /translator crashed/,
+);
+assert.equal(ordinaryFailureSession.destroyCalls, 1);
 
 const rawAbortController = new AbortController();
 rawAbortController.abort();

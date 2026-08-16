@@ -6,6 +6,7 @@ export interface PopupCopy {
   aiTab: string;
   tabListLabel: string;
   dialogLabel: (word: string) => string;
+  translationDialogLabel: (sourceText: string) => string;
   selectionTriggerLabel: string;
   selectionTriggerTooltip: string;
   audioUk: string;
@@ -95,6 +96,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     aiTab: "OpenRouter",
     tabListLabel: "Explanation source",
     dialogLabel: (word) => `Dictionary lookup for ${word}`,
+    translationDialogLabel: (sourceText) => `Translation for ${sourceText}`,
     selectionTriggerLabel: "Open dictionary for selected text",
     selectionTriggerTooltip: "Open dictionary",
     audioUk: "Pronounce UK",
@@ -139,6 +141,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     aiTab: "OpenRouter",
     tabListLabel: "Nguồn giải thích",
     dialogLabel: (word) => `Tra từ ${word}`,
+    translationDialogLabel: (sourceText) => `Bản dịch cho ${sourceText}`,
     selectionTriggerLabel: "Mở từ điển cho nội dung đã chọn",
     selectionTriggerTooltip: "Mở từ điển",
     audioUk: "Phát âm UK",
@@ -183,6 +186,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     aiTab: "OpenRouter",
     tabListLabel: "解释来源",
     dialogLabel: (word) => `查询 ${word}`,
+    translationDialogLabel: (sourceText) => `翻译 ${sourceText}`,
     selectionTriggerLabel: "打开所选内容的词典",
     selectionTriggerTooltip: "打开词典",
     audioUk: "播放英式发音",

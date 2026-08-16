@@ -206,10 +206,11 @@ export class BrowserDictionaryTranslator {
     try {
       return await translateNonEmptyText(session, trimmed, signal);
     } catch (error) {
-      if (!isAbortError(error) && !signal?.aborted) {
-        this.dropSession(sourceLanguage, targetLanguage, session);
+      if (isAbortError(error) || signal?.aborted) {
+        return null;
       }
-      return null;
+      this.dropSession(sourceLanguage, targetLanguage, session);
+      throw error;
     }
   }
 

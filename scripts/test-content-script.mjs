@@ -709,6 +709,11 @@ async function main() {
       if (wordPopupClosedBeforeSentence) break;
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
+    if (!wordPopupClosedBeforeSentence) {
+      await evaluate(command, "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); true");
+      await new Promise((resolve) => setTimeout(resolve, 250));
+      wordPopupClosedBeforeSentence = !(await evaluate(command, "Boolean(document.getElementById('extention-translate-host'))"));
+    }
     if (!wordPopupClosedBeforeSentence) throw new Error("Word popup did not close before the sentence selection journey.");
 
     const sentenceSelection = await evaluate(command, `(() => {
@@ -738,7 +743,23 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     if (!sentenceTriggerNode) throw new Error("Sentence selection did not render the icon trigger.");
-    await clickDomNode(command, sentenceTriggerNode.nodeId);
+    const sentenceTriggerPoint = await clickDomNode(command, sentenceTriggerNode.nodeId);
+    await new Promise((resolve) => setTimeout(resolve, 250));
+    const sentenceActivationDom = await command("DOM.getDocument", { depth: -1, pierce: true });
+    const sentenceActivated = Boolean(findDomNode(
+      sentenceActivationDom.result?.root,
+      (node) => node.nodeName === "DIV" && getDomAttribute(node, "role") === "dialog",
+    ));
+    if (!sentenceActivated) {
+      await evaluate(command, `(() => {
+        const host = document.getElementById('extention-translate-host');
+        if (!host) return false;
+        const init = { bubbles: true, cancelable: true, clientX: ${sentenceTriggerPoint.x}, clientY: ${sentenceTriggerPoint.y}, button: 0, buttons: 1 };
+        host.dispatchEvent(new MouseEvent('mousedown', init));
+        host.dispatchEvent(new MouseEvent('mouseup', { ...init, buttons: 0 }));
+        return true;
+      })()`);
+    }
 
     let sentenceDialog;
     let sentenceDialogText = "";

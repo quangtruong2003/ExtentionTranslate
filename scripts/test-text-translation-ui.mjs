@@ -24,6 +24,7 @@ assert.match(popupSource, /kind: "translation-ready"; sourceText: string; transl
 assert.match(popupSource, /kind: "translation-error"; sourceText: string; code: "TRANSLATOR_UNAVAILABLE" \| "TRANSLATION_FAILED"/);
 assert.match(popupSource, /phase\.kind === "ready" &&/);
 assert.match(popupSource, /primaryLabel=\{isTranslationPhase \? labels\.translationTab : undefined\}/);
+assert.match(popupSource, /aria-label=\{isTranslationPhase \? labels\.translationDialogLabel\(word\) : labels\.dialogLabel\(word\)\}/);
 assert.match(popupSource, /<TextTranslationPanel/);
 assert.doesNotMatch(popupSource, /phase\.kind === "translation-[\s\S]{0,240}<DictionaryHeader/);
 
@@ -60,6 +61,9 @@ const chinese = getPopupCopy("zh-CN");
 assert.equal(english.translationTab, "Translation");
 assert.equal(vietnamese.translationTab, "Bản dịch");
 assert.equal(chinese.translationTab, "翻译");
+assert.equal(english.translationDialogLabel("Hello world"), "Translation for Hello world");
+assert.equal(vietnamese.translationDialogLabel("Xin chào"), "Bản dịch cho Xin chào");
+assert.equal(chinese.translationDialogLabel("你好"), "翻译 你好");
 assert.equal(english.originalText, "Original text");
 assert.equal(vietnamese.originalText, "Văn bản gốc");
 assert.equal(chinese.originalText, "原文");

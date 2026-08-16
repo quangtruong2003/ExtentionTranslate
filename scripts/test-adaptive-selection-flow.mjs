@@ -57,7 +57,6 @@ assert.ok(
 );
 
 assert.match(openPopup, /word:\s*selectionMode\.sourceText/);
-assert.match(openPopup, /if \(settings\.targetLanguage !== "en"\)[\s\S]*browserDictionaryTranslator\.warm\(settings\.targetLanguage\)/);
 assert.match(openPopup, /if \(shouldAutoAsk && settings\.autoAskAIOnPopup && settings\.hasOpenRouterApiKey\)/);
 assert.match(openPopup, /void handleAskAI\(\{ revealTab: false \}\);/);
 
@@ -67,6 +66,12 @@ assert.match(openPopup, /activeTab:\s*"dictionary"/);
 assert.match(textBranch, /void translateSelectedText\(info,\s*selectionMode\.sourceText,\s*myId\)/);
 assert.match(textBranch, /return;/);
 assert.doesNotMatch(textBranch, /MESSAGE_TYPES\.DICTIONARY_LOOKUP/);
+assert.doesNotMatch(textBranch, /browserDictionaryTranslator\.warm/);
+
+const textBranchIndex = openPopup.indexOf('if (selectionMode.kind === "text")');
+const warmIndex = openPopup.indexOf("browserDictionaryTranslator.warm(settings.targetLanguage)");
+assert.ok(warmIndex > textBranchIndex, "dictionary warm only runs after text mode has returned");
+assert.match(openPopup.slice(warmIndex - 80, warmIndex + 80), /settings\.targetLanguage !== "en"/);
 
 assert.match(openPopup, /MESSAGE_TYPES\.DICTIONARY_LOOKUP,[\s\S]*word:\s*selectionMode\.lookupText/);
 assert.match(openPopup, /language:\s*info\.pageLanguage/);
