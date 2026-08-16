@@ -44,7 +44,7 @@ function extractIfBlock(source, condition) {
   assert.fail(`branch ${condition} body is balanced`);
 }
 
-assert.match(contentSource, /import \{[^}]*classifySelection[^}]*normalizeBrowserSourceLanguage[^}]*\} from "\.\/selectionMode"/);
+assert.match(contentSource, /import \{[^}]*classifySelection[^}]*detectSelectionSourceLanguage[^}]*\} from "\.\/selectionMode"/);
 
 const openPopup = extractFunction(contentSource, "openPopup");
 const classificationIndex = openPopup.indexOf("classifySelection(info.text)");
@@ -92,7 +92,7 @@ assert.match(translateSelectedText, /stopDictionaryTranslation\(\)/);
 assert.match(translateSelectedText, /const controller = new AbortController\(\)/);
 assert.match(translateSelectedText, /translationController = controller/);
 assert.match(translateSelectedText, /translationRequestId = requestId/);
-assert.match(translateSelectedText, /normalizeBrowserSourceLanguage\(info\.pageLanguage\) \?\? "en"/);
+assert.match(translateSelectedText, /detectSelectionSourceLanguage\(sourceText,\s*info\.pageLanguage\)/);
 assert.match(translateSelectedText, /const targetLanguage = toBrowserTextTargetLanguage\(settings\.targetLanguage\)/);
 assert.match(translateSelectedText, /if \(sourceLanguage === targetLanguage\)/);
 assert.match(translateSelectedText, /provider:\s*"source"/);

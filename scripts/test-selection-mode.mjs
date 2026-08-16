@@ -1,5 +1,9 @@
 import assert from "node:assert/strict";
-import { classifySelection, normalizeBrowserSourceLanguage } from "../src/content/selectionMode.ts";
+import {
+  classifySelection,
+  detectSelectionSourceLanguage,
+  normalizeBrowserSourceLanguage,
+} from "../src/content/selectionMode.ts";
 import { MAX_SELECTION_LENGTH } from "../src/shared/constants.ts";
 
 assert.deepEqual(classifySelection("Uranium"), {
@@ -76,6 +80,13 @@ assert.equal(normalizeBrowserSourceLanguage("en-US"), "en");
 assert.equal(normalizeBrowserSourceLanguage("vi-VN"), "vi");
 assert.equal(normalizeBrowserSourceLanguage("zh-CN"), "zh");
 assert.equal(normalizeBrowserSourceLanguage("fr-FR"), undefined);
+assert.equal(detectSelectionSourceLanguage("in the process", "vi"), "en");
+assert.equal(detectSelectionSourceLanguage("flights of stairs", "vi-VN"), "en");
+assert.equal(detectSelectionSourceLanguage("Quantum mechanics describes motion.", "vi"), "en");
+assert.equal(detectSelectionSourceLanguage("Tôi đang ở trong nhà.", "en"), "vi");
+assert.equal(detectSelectionSourceLanguage("toi dang o trong nha", "en"), "vi");
+assert.equal(detectSelectionSourceLanguage("铀是一种放射性物质。", "vi"), "zh");
+assert.equal(detectSelectionSourceLanguage("một câu không rõ", "vi"), "vi");
 assert.equal(MAX_SELECTION_LENGTH, 2000);
 
 console.log("PASS: selection mode classification, page-language normalization, and selection length bounds are covered.");

@@ -10,7 +10,7 @@ import net from "node:net";
 const projectRoot = join(dirname(fileURLToPath(import.meta.url)), "..");
 const extensionPath = join(projectRoot, "dist");
 const pageHtml = `<!doctype html>
-<html lang="en">
+<html lang="vi">
   <body>
     <div style="height: 560px"></div>
     <p id="target">run</p>

@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "ExtentionTranslate",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "Instant English dictionary popup with English, Vietnamese, and Simplified Chinese display plus streaming OpenRouter AI.",
   "minimum_chrome_version": "114",
   "permissions": ["storage"],

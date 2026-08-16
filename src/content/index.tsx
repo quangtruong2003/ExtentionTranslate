@@ -16,7 +16,7 @@ import { getCachedDictionaryTranslation, setCachedDictionaryTranslation } from "
 import { Toaster, toast } from "@/components/ui/sonner";
 import popupCss from "@/styles/popup.css?inline";
 import sonnerCss from "sonner/dist/styles.css?inline";
-import { classifySelection, normalizeBrowserSourceLanguage, type BrowserSourceLanguage } from "./selectionMode";
+import { classifySelection, detectSelectionSourceLanguage, type BrowserSourceLanguage } from "./selectionMode";
 
 interface PopupState {
   word: string;
@@ -499,7 +499,7 @@ async function translateSelectedText(info: SelectionInfo, sourceText: string, re
   const controller = new AbortController();
   translationController = controller;
   translationRequestId = requestId;
-  const sourceLanguage = normalizeBrowserSourceLanguage(info.pageLanguage) ?? "en";
+  const sourceLanguage = detectSelectionSourceLanguage(sourceText, info.pageLanguage);
   const targetLanguage = toBrowserTextTargetLanguage(settings.targetLanguage);
 
   const isCurrent = () => requestId === currentRequestId && !controller.signal.aborted && Boolean(state);
