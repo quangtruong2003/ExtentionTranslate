@@ -4,7 +4,7 @@ import type { AIExplanation, AIRequest, DictionaryEntry, DictionaryPhrase, Targe
 import type { OpenRouterModel, OpenRouterModelsResponse } from "@/shared/openrouter-types";
 import { extractFirstJSONObject } from "@/shared/utils";
 import { consumeOpenRouterStream } from "./sse";
-import { buildDictionaryLookupMessages, buildDictionaryTranslationMessages, buildOpenRouterMessages, buildOpenRouterStreamBody } from "./messages";
+import { buildDictionaryLookupMessages, buildDictionaryTranslationMessages, buildOpenRouterGenerationParameters, buildOpenRouterMessages, buildOpenRouterStreamBody } from "./messages";
 
 interface ChatCompletionResponse {
   choices?: Array<{
@@ -19,6 +19,9 @@ export interface OpenRouterConfig {
   model: string;
   systemPrompt: string;
   thinkingEnabled?: boolean;
+  reasoningEffort?: "low" | "medium" | "high";
+  reasoningMaxTokens?: number | null;
+  maxTokens?: number;
   signal?: AbortSignal;
 }
 
@@ -86,7 +89,12 @@ export async function callOpenRouter(
         model: config.model,
         messages,
         temperature: 0.2,
-        max_tokens: 700,
+        ...buildOpenRouterGenerationParameters({
+          thinkingEnabled: config.thinkingEnabled ?? true,
+          reasoningEffort: config.reasoningEffort,
+          reasoningMaxTokens: config.reasoningMaxTokens,
+          maxTokens: config.maxTokens,
+        }),
         response_format: { type: "json_object" },
       }),
     });
@@ -140,7 +148,11 @@ export async function streamOpenRouter(
         "HTTP-Referer": "https://extention-translate.local",
         "X-Title": "ExtentionTranslate",
       },
-      body: JSON.stringify(buildOpenRouterStreamBody(config.model, messages, config.thinkingEnabled ?? true)),
+      body: JSON.stringify(buildOpenRouterStreamBody(config.model, messages, config.thinkingEnabled ?? true, {
+        reasoningEffort: config.reasoningEffort,
+        reasoningMaxTokens: config.reasoningMaxTokens,
+        maxTokens: config.maxTokens,
+      })),
     });
   } catch (err) {
     if ((err as { name?: string }).name === "AbortError") throw err;

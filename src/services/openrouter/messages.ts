@@ -1,3 +1,5 @@
+import type { OpenRouterReasoningEffort } from "@/shared/types";
+
 export interface OpenRouterPromptRequest {
   word: string;
   sentence?: string;
@@ -14,6 +16,27 @@ export interface OpenRouterMessage {
 }
 
 const AI_STREAM_MAX_TOKENS = 1600;
+
+export interface OpenRouterGenerationOptions {
+  thinkingEnabled?: boolean;
+  reasoningEffort?: OpenRouterReasoningEffort;
+  reasoningMaxTokens?: number | null;
+  maxTokens?: number;
+}
+
+export function buildOpenRouterGenerationParameters(options: OpenRouterGenerationOptions = {}) {
+  const thinkingEnabled = options.thinkingEnabled ?? true;
+  const reasoningMaxTokens = options.reasoningMaxTokens ?? null;
+  const reasoning = !thinkingEnabled
+    ? { effort: "none" as const }
+    : reasoningMaxTokens !== null
+      ? { max_tokens: reasoningMaxTokens }
+      : { effort: (options.reasoningEffort ?? "low") as OpenRouterReasoningEffort };
+  return {
+    max_tokens: options.maxTokens ?? AI_STREAM_MAX_TOKENS,
+    reasoning,
+  };
+}
 
 export function buildOpenRouterMessages(
   systemPrompt: string,
@@ -36,13 +59,13 @@ export function buildOpenRouterStreamBody(
   model: string,
   messages: OpenRouterMessage[],
   thinkingEnabled: boolean,
+  options: Omit<OpenRouterGenerationOptions, "thinkingEnabled"> = {},
 ) {
   return {
     model,
     messages,
     temperature: 0.2,
-    max_tokens: AI_STREAM_MAX_TOKENS,
-    reasoning: thinkingEnabled ? { effort: "low" } : { effort: "none" },
+    ...buildOpenRouterGenerationParameters({ ...options, thinkingEnabled }),
     stream: true,
   };
 }

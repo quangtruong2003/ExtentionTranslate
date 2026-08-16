@@ -32,6 +32,17 @@ assert.equal("response_format" in thinkingBody, false);
 
 const noThinkingBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, false);
 assert.deepEqual(noThinkingBody.reasoning, { effort: "none" });
+const mediumBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, true, { reasoningEffort: "medium", maxTokens: 2400 });
+assert.equal(mediumBody.max_tokens, 2400);
+assert.deepEqual(mediumBody.reasoning, { effort: "medium" });
+const exactBudgetBody = buildOpenRouterStreamBody(
+  "openrouter/auto",
+  promptMessages,
+  true,
+  { reasoningEffort: "high", reasoningMaxTokens: 1200, maxTokens: 2400 },
+);
+assert.deepEqual(exactBudgetBody.reasoning, { max_tokens: 1200 });
+assert.equal("effort" in exactBudgetBody.reasoning, false);
 const translationMessages = buildDictionaryTranslationMessages({ word: "run", meanings: [] }, "vi");
 assert.match(translationMessages[0].content, /Vietnamese/);
 assert.match(translationMessages[1].content, /"word":"run"/);

@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
 import { runAIStreamOnPort } from "../src/background/streaming.ts";
 
 const request = { word: "run", sentence: "They run every day.", targetLanguage: "vi" };
@@ -45,5 +46,10 @@ await runAIStreamOnPort({ postMessage: (event) => truncatedEvents.push(event) },
   throw Object.assign(new Error("response reached the token limit"), { code: "TRUNCATED_RESPONSE" });
 });
 assert.deepEqual(truncatedEvents, [{ type: "error", code: "TRUNCATED_RESPONSE" }]);
+
+const backgroundSource = await readFile(new URL("../src/background/index.ts", import.meta.url), "utf8");
+assert.match(backgroundSource, /reasoningEffort: settings\.openRouterReasoningEffort/);
+assert.match(backgroundSource, /reasoningMaxTokens: settings\.openRouterReasoningMaxTokens/);
+assert.match(backgroundSource, /maxTokens: settings\.openRouterMaxTokens/);
 
 console.log("PASS: background stream contract strips target language and orders port events.");
