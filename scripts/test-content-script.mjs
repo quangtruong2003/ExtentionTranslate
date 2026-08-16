@@ -208,6 +208,9 @@ async function main() {
   if (!existsSync(join(extensionPath, "manifest.json"))) {
     throw new Error("dist/manifest.json is missing; run npm run build first.");
   }
+  if (!existsSync(join(extensionPath, "icons/icon48.png"))) {
+    throw new Error("dist/icons/icon48.png is missing; the selection trigger cannot load the project icon.");
+  }
 
   const pageServer = createServer((_request, response) => {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
