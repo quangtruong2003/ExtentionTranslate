@@ -15,6 +15,13 @@ const pageHtml = `<!doctype html>
     <div style="height: 560px"></div>
     <p id="target">run</p>
     <p id="sentence-target">Uranium is a radioactive material.</p>
+    <section id="multi-block-target">
+      <p>The building manager will not authorize ___ renovations until the annual budget has been finalized.</p>
+      <p>A. between</p>
+      <p>B. any</p>
+      <p>C. whether</p>
+      <p>D. which</p>
+    </section>
     <div style="height: 1200px"></div>
   </body>
 </html>`;
@@ -438,13 +445,11 @@ async function main() {
       renderedDialog,
       (node) => node.nodeName === "BUTTON" && /^(Close|Đóng|关闭)$/.test(getDomAttribute(node, "aria-label").trim()),
     );
-    if (closeButtonsInDialog.length === 0) {
-      throw new Error("Popup dialog is missing its visible close button.");
-    }
-    const firstCloseButton = closeButtonsInDialog[0];
-    const closeButtonBox = await command("DOM.getBoxModel", { nodeId: firstCloseButton.nodeId });
-    if (!closeButtonBox.result?.model) {
-      throw new Error("Popup close button exists but is not visible.");
+    for (const closeButton of closeButtonsInDialog) {
+      const closeButtonBox = await command("DOM.getBoxModel", { nodeId: closeButton.nodeId });
+      if (closeButtonBox.result?.model) {
+        throw new Error(`Popup dialog rendered a visible close button: ${getDomAttribute(closeButton, "aria-label")}`);
+      }
     }
     if (!finalPopupText.includes("Từ điển") || !finalPopupText.includes("AI")) {
       throw new Error("Popup did not render the Dictionary and AI tabs.");
@@ -717,6 +722,71 @@ async function main() {
       wordPopupClosedBeforeSentence = !(await evaluate(command, "Boolean(document.getElementById('extention-translate-host'))"));
     }
     if (!wordPopupClosedBeforeSentence) throw new Error("Word popup did not close before the sentence selection journey.");
+
+    await evaluate(command, "window.scrollTo(0, 0); true");
+    const multiBlockBounds = await evaluate(command, `(() => {
+      const root = document.getElementById("multi-block-target");
+      const first = root?.firstElementChild?.getBoundingClientRect();
+      const last = root?.lastElementChild?.getBoundingClientRect();
+      const firstText = root?.firstElementChild?.firstChild;
+      const lastText = root?.lastElementChild?.firstChild;
+      if (!first || !last || !firstText || !lastText) return null;
+      return {
+        start: { x: first.left + 2, y: first.top + first.height / 2 },
+        end: { x: last.right - 2, y: last.top + last.height / 2 },
+      };
+    })()`);
+    if (!multiBlockBounds) throw new Error("Multi-block selection bounds could not be measured.");
+    const multiBlockSelection = await evaluate(command, `(() => {
+      const root = document.getElementById("multi-block-target");
+      const first = root?.firstElementChild?.firstChild;
+      const last = root?.lastElementChild?.firstChild;
+      if (!first || !last) return null;
+      const range = document.createRange();
+      range.setStart(first, 0);
+      range.setEnd(last, last.textContent.length);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", {
+        bubbles: true,
+        cancelable: true,
+        clientX: ${multiBlockBounds.end.x},
+        clientY: ${multiBlockBounds.end.y},
+      }));
+      return { text: selection.toString(), rect: range.getBoundingClientRect().toJSON() };
+    })()`);
+    if (!multiBlockSelection?.text.includes("A. between") || !multiBlockSelection?.text.includes("D. which")) {
+      throw new Error(`Multi-block selection setup failed; got ${JSON.stringify(multiBlockSelection)}.`);
+    }
+    let multiBlockTriggerNode;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const multiBlockTriggerDom = await command("DOM.getDocument", { depth: -1, pierce: true });
+      multiBlockTriggerNode = findDomNode(
+        multiBlockTriggerDom.result?.root,
+        (node) => node.nodeName === "BUTTON" && node.attributes?.includes("data-ext-selection-trigger"),
+      );
+      if (multiBlockTriggerNode) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!multiBlockTriggerNode) {
+      throw new Error(`Multi-block selection did not render the icon trigger: ${JSON.stringify(multiBlockSelection)}.`);
+    }
+    const multiBlockTriggerBox = await command("DOM.getBoxModel", { nodeId: multiBlockTriggerNode.nodeId });
+    const multiBlockTriggerBorder = multiBlockTriggerBox.result?.model?.border;
+    if (!multiBlockTriggerBorder || multiBlockTriggerBorder.length < 8) {
+      throw new Error("Multi-block selection trigger could not be measured.");
+    }
+    const multiBlockTriggerCenter = {
+      x: (multiBlockTriggerBorder[0] + multiBlockTriggerBorder[2] + multiBlockTriggerBorder[4] + multiBlockTriggerBorder[6]) / 4,
+      y: (multiBlockTriggerBorder[1] + multiBlockTriggerBorder[3] + multiBlockTriggerBorder[5] + multiBlockTriggerBorder[7]) / 4,
+    };
+    const triggerDistance = Math.hypot(multiBlockTriggerCenter.x - multiBlockBounds.end.x, multiBlockTriggerCenter.y - multiBlockBounds.end.y);
+    if (triggerDistance > 80) {
+      throw new Error(`Multi-block selection trigger was not anchored near the mouse pointer: ${JSON.stringify({ multiBlockBounds, multiBlockTriggerCenter, triggerDistance })}`);
+    }
+    await evaluate(command, "document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true })); true");
+    await new Promise((resolve) => setTimeout(resolve, 250));
 
     const sentenceSelection = await evaluate(command, `(() => {
       const node = document.getElementById("sentence-target").firstChild;

@@ -1,4 +1,5 @@
 import { MAX_SELECTION_LENGTH } from "@/shared/constants";
+import type { PointerPosition } from "./positioning";
 
 export interface SelectionInfo {
   text: string;
@@ -8,6 +9,7 @@ export interface SelectionInfo {
   contextBefore?: string;
   contextAfter?: string;
   pageLanguage?: string;
+  pointerPosition?: PointerPosition;
 }
 
 function isInsideExtension(el: EventTarget | null): boolean {
@@ -16,7 +18,7 @@ function isInsideExtension(el: EventTarget | null): boolean {
   return Boolean(host && (host === el || host.contains(el)));
 }
 
-export function getCurrentSelection(target?: EventTarget | null): SelectionInfo | null {
+export function getCurrentSelection(target?: EventTarget | null, pointerPosition?: PointerPosition): SelectionInfo | null {
   if (isInsideExtension(target ?? null)) return null;
   const selection = window.getSelection();
   if (!selection || selection.rangeCount === 0) return null;
@@ -53,6 +55,7 @@ export function getCurrentSelection(target?: EventTarget | null): SelectionInfo 
     contextBefore: before,
     contextAfter: after,
     pageLanguage,
+    pointerPosition,
   };
 }
 

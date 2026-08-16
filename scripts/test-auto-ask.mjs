@@ -5,6 +5,9 @@ import { DEFAULT_SETTINGS, normalizeSettings, toPopupSettings } from "../src/sha
 assert.equal(DEFAULT_SETTINGS.autoAskAIOnPopup, false);
 assert.equal(normalizeSettings({}).autoAskAIOnPopup, false);
 assert.equal(normalizeSettings({ autoAskAIOnPopup: true }).autoAskAIOnPopup, true);
+assert.equal(DEFAULT_SETTINGS.includeSelectionContext, true);
+assert.equal(normalizeSettings({}).includeSelectionContext, true);
+assert.equal(normalizeSettings({ includeSelectionContext: false }).includeSelectionContext, false);
 
 const withKey = toPopupSettings({
   ...DEFAULT_SETTINGS,
@@ -12,6 +15,7 @@ const withKey = toPopupSettings({
   openRouterApiKey: "secret",
 });
 assert.equal(withKey.autoAskAIOnPopup, true);
+assert.equal(withKey.includeSelectionContext, true);
 assert.equal(withKey.hasOpenRouterApiKey, true);
 
 const withoutKey = toPopupSettings({
@@ -56,6 +60,8 @@ const handleAskAI = contentSource.slice(handleAskAIStart, contentSource.indexOf(
 assert.match(handleAskAI, /async function handleAskAI\(\{ revealTab = true \}: \{ revealTab\?: boolean \} = \{\}\)/);
 assert.match(handleAskAI, /\.\.\.\(revealTab \? \{ activeTab: "ai" \} : \{\}\)/);
 assert.match(handleAskAI, /aiRequested:\s*true/);
+assert.match(handleAskAI, /settings\.includeSelectionContext/);
+assert.match(handleAskAI, /\.\.\.\(settings\.includeSelectionContext \?/);
 assert.match(handleAskAI, /let settled = false/);
 assert.match(handleAskAI, /port\.onDisconnect\.addListener\([\s\S]*?setState\(\{ aiLoading: false, aiError: "INTERNAL" \}\)/);
 const onMessageSource = handleAskAI.slice(

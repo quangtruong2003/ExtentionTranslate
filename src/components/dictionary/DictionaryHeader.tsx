@@ -20,10 +20,11 @@ interface Props {
   onAskAI: () => void;
   aiLoading?: boolean;
   aiDone?: boolean;
+  autoAskAI: boolean;
   targetLanguage: TargetLanguage;
 }
 
-export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLanguage }: Props) {
+export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, autoAskAI, targetLanguage }: Props) {
   const partOfSpeech = getPartOfSpeechLabels(entry, targetLanguage).join(" · ");
   const labels = getPopupCopy(targetLanguage);
   const [copied, setCopied] = useState(false);
@@ -105,9 +106,9 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
   }, [audioUk, audioUs, entry.word]);
 
   return (
-    <div className="space-y-1 px-4 pt-4 pb-2">
+    <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
       <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-baseline gap-2 pr-8">
+        <div className="flex items-baseline gap-2">
           <h2 className="truncate text-xl font-semibold tracking-tight">{entry.word}</h2>
           {partOfSpeech && (
             <span className="text-xs italic text-muted-foreground">{partOfSpeech}</span>
@@ -158,7 +159,7 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
         )}
       </div>
 
-      <div className="flex flex-wrap items-center justify-end gap-1">
+      <div className="flex shrink-0 items-center gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -174,22 +175,24 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
           <TooltipContent>{labels.copyWord}</TooltipContent>
         </Tooltip>
 
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              size="sm"
-              variant={aiDone ? "outline" : "default"}
-              ref={askAiButtonRef}
-              onClick={onAskAI}
-              disabled={aiLoading}
-              className="h-8 gap-1.5 px-3"
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              <span>{aiLoading ? labels.askAILoading : labels.askAI}</span>
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>{labels.askAITooltip}</TooltipContent>
-        </Tooltip>
+        {!autoAskAI && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                size="sm"
+                variant={aiDone ? "outline" : "default"}
+                ref={askAiButtonRef}
+                onClick={onAskAI}
+                disabled={aiLoading}
+                className="h-8 gap-1.5 px-3"
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                <span>{aiLoading ? labels.askAILoading : labels.askAI}</span>
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{labels.askAITooltip}</TooltipContent>
+          </Tooltip>
+        )}
       </div>
     </div>
   );

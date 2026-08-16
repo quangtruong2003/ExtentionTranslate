@@ -234,10 +234,10 @@ No `<all_urls>` host permission — only the content script `matches: ["<all_url
 - [ ] Extension still works after browser restart (settings persisted).
 - [ ] Works on both Chrome and Edge.
 - [ ] Short words render a ~340px popup; wide AI markdown grows toward 560px without leaving the viewport.
-- [ ] The X button closes the popup in every phase; Tab wraps inside the popup; Esc still closes it.
+- [ ] The popup renders without an outer border; Tab wraps inside the popup; Esc still closes it.
 - [ ] Parts of speech display in Vietnamese or Chinese when those languages are selected.
 - [ ] With no API key, the empty state's button opens Settings instead of failing a request.
-- [ ] OS dark mode flips the popup and the selection trigger to dark tokens.
+- [ ] The theme setting (auto/light/dark) flips the popup, trigger, and Settings page; auto tracks the OS.
 - [ ] Copy buttons flash a check inline; error toasts appear bottom-center near the popup.
 - [ ] Clicking a synonym or phrase looks it up in place without moving the popup.
 - [ ] The Stop button cancels a streaming AI answer and keeps the partial text.

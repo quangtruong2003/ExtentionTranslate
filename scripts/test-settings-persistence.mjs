@@ -20,7 +20,9 @@ const payloadSource = composeSource.slice(composeSource.indexOf("return {"), com
 for (const field of [
   "selectionTriggerMode",
   "autoAskAIOnPopup",
+  "includeSelectionContext",
   "targetLanguage",
+  "theme",
   "openRouterApiKey",
   "openRouterModel",
   "openRouterThinkingEnabled",

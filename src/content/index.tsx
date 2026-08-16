@@ -117,6 +117,11 @@ function ensureMounted(): { root: Root; host: HTMLElement; container: HTMLElemen
 
 let stylesInjected = new WeakSet<ShadowRoot>();
 
+function applyHostTheme(theme: PopupSettings["theme"]) {
+  if (!hostEl) return;
+  hostEl.className = theme === "dark" ? "ext-theme-dark" : theme === "light" ? "ext-theme-light" : "";
+}
+
 function injectPopupStyles(shadow: ShadowRoot) {
   if (stylesInjected.has(shadow)) return;
   const style = document.createElement("style");
@@ -129,14 +134,15 @@ function injectPopupStyles(shadow: ShadowRoot) {
 function render() {
   if (!state && !selectionTriggerInfo) return;
   const { root } = ensureMounted();
+  applyHostTheme(settings.theme);
   root.render(
     <StrictMode>
       {state ? (
         <PopupContainer
           state={state}
+          autoAskAI={settings.autoAskAIOnPopup}
           onAskAI={() => void handleAskAI()}
           onRetryLookup={handleRetry}
-          onClose={closePopup}
           onOpenSettings={openSettingsPage}
           onLookupWord={handleLookupWord}
           onStop={handleStopAI}
@@ -237,11 +243,11 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
   );
 }
 
-function PopupContainer({ state, onAskAI, onRetryLookup, onClose, onOpenSettings, onLookupWord, onStop, onTabChange }: {
+function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettings, onLookupWord, onStop, onTabChange }: {
   state: PopupState;
+  autoAskAI: boolean;
   onAskAI: () => void;
   onRetryLookup: () => void;
-  onClose: () => void;
   onOpenSettings: () => void;
   onLookupWord: (word: string) => void;
   onStop: () => void;
@@ -280,13 +286,13 @@ function PopupContainer({ state, onAskAI, onRetryLookup, onClose, onOpenSettings
           aiThinkingText={state.aiThinkingText}
           aiThinkingEnabled={state.aiThinkingEnabled}
           hasApiKey={state.hasApiKey}
+          autoAskAI={autoAskAI}
           activeTab={state.activeTab}
           targetLanguage={state.targetLanguage}
           translationStatus={state.translationStatus}
           onAskAI={onAskAI}
           onTabChange={onTabChange}
           onRetryLookup={onRetryLookup}
-          onClose={onClose}
           onOpenSettings={onOpenSettings}
           onLookupWord={onLookupWord}
           onStop={onStop}
@@ -348,7 +354,7 @@ function placeSelectionTrigger(rect: DOMRect) {
     width: measured?.width || 36,
     height: measured?.height || 36,
   };
-  const pos = computeSelectionTriggerPosition(rect, triggerSize, viewport);
+  const pos = computeSelectionTriggerPosition(rect, triggerSize, viewport, selectionTriggerInfo?.pointerPosition);
   if (hostEl) {
     Object.assign(hostEl.style, {
       top: `${pos.top}px`,
@@ -571,10 +577,12 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
   const myId = currentRequestId;
   const req: AIRequest = {
     word: state.word,
-    sentence: currentSelectionInfo?.sentence,
-    contextBefore: currentSelectionInfo?.contextBefore,
-    contextAfter: currentSelectionInfo?.contextAfter,
-    pageLanguage: currentSelectionInfo?.pageLanguage,
+    ...(settings.includeSelectionContext ? {
+      sentence: currentSelectionInfo.sentence,
+      contextBefore: currentSelectionInfo.contextBefore,
+      contextAfter: currentSelectionInfo.contextAfter,
+      pageLanguage: currentSelectionInfo.pageLanguage,
+    } : {}),
   };
   try {
     const port = chrome.runtime.connect({ name: AI_STREAM_PORT_NAME });
@@ -719,7 +727,7 @@ function showSelectionTrigger(info: SelectionInfo) {
   sourceDictionaryEntry = null;
   currentSelectionInfo = info;
   selectionTriggerInfo = info;
-  selectionTriggerPosition = computeSelectionTriggerPosition(getSelectionRect(info), { width: 36, height: 36 }, getPopupViewport());
+  selectionTriggerPosition = computeSelectionTriggerPosition(getSelectionRect(info), { width: 36, height: 36 }, getPopupViewport(), info.pointerPosition);
   popupPosition = null;
   ensureMounted();
   render();
@@ -833,11 +841,12 @@ function onSelectionEvent(ev: MouseEvent | KeyboardEvent | null) {
   if (debounceTimer !== null) {
     window.clearTimeout(debounceTimer);
   }
+  const pointerPosition = ev instanceof MouseEvent ? { x: ev.clientX, y: ev.clientY } : undefined;
   debounceTimer = window.setTimeout(() => {
       void (async () => {
         await refreshSettings();
        if (settings.selectionTriggerMode === "off") return;
-       const sel = getCurrentSelection(target);
+       const sel = getCurrentSelection(target, pointerPosition);
        if (!sel) {
          const liveSelection = window.getSelection();
          if ((!liveSelection || liveSelection.isCollapsed) && selectionTriggerInfo && !selectionTriggerPointerDown) {
@@ -870,8 +879,12 @@ async function refreshSettings() {
 function applySettings(next: PopupSettings) {
   settingsRevision += 1;
   const targetLanguageChanged = settings.targetLanguage !== next.targetLanguage;
+  const themeChanged = settings.theme !== next.theme;
   const previousMode = settings.selectionTriggerMode;
   settings = next;
+  if (themeChanged) {
+    applyHostTheme(next.theme);
+  }
   if (next.selectionTriggerMode === "off" && (popupWasOpened || selectionTriggerInfo)) {
     closePopup();
     return;
@@ -916,7 +929,7 @@ function watchSettings() {
       if (!selectionTriggerInfo || selectionTriggerPointerDown) return;
       const sel = window.getSelection();
       if (!sel || sel.isCollapsed) {
-        closePopup();
+        onSelectionEvent(null);
       }
     },
     true,

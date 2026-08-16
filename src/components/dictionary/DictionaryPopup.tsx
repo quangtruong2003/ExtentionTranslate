@@ -1,8 +1,6 @@
 import { useRef } from "react";
-import { X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 import { DictionaryHeader } from "./DictionaryHeader";
 import { MeaningSection } from "./MeaningSection";
 import { DictionarySkeleton } from "./DictionarySkeleton";
@@ -34,13 +32,13 @@ interface Props {
   aiThinkingText?: string;
   aiThinkingEnabled: boolean;
   hasApiKey: boolean;
+  autoAskAI: boolean;
   activeTab: PopupTab;
   targetLanguage: TargetLanguage;
   translationStatus?: TranslationStatus;
   onAskAI: () => void;
   onTabChange: (tab: PopupTab) => void;
   onRetryLookup: () => void;
-  onClose: () => void;
   onOpenSettings: () => void;
   onLookupWord?: (word: string) => void;
   onStop?: () => void;
@@ -57,13 +55,13 @@ export function DictionaryPopup(props: Props) {
     aiThinkingText,
     aiThinkingEnabled,
     hasApiKey,
+    autoAskAI,
     activeTab,
     targetLanguage,
     translationStatus,
     onAskAI,
     onTabChange,
     onRetryLookup,
-    onClose,
     onOpenSettings,
     onLookupWord,
     onStop,
@@ -100,23 +98,12 @@ export function DictionaryPopup(props: Props) {
       <div
         ref={rootRef}
         tabIndex={-1}
-        className="relative flex max-h-[min(680px,calc(100vh-24px))] w-fit min-w-[340px] max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl animate-fade-in"
+        className="flex max-h-[min(680px,calc(100vh-24px))] w-fit min-w-[340px] max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-2xl animate-fade-in"
         role="dialog"
         aria-modal="true"
         onKeyDown={handleTabTrap}
         aria-label={isTranslationPhase ? labels.translationDialogLabel(word) : labels.dialogLabel(word)}
       >
-        <Button
-          type="button"
-          variant="ghost"
-          size="icon"
-          onClick={onClose}
-          aria-label={labels.close}
-          className="absolute right-1.5 top-1.5 z-10 h-7 w-7 text-muted-foreground hover:text-foreground"
-        >
-          <X className="h-4 w-4" aria-hidden="true" />
-        </Button>
-
       {phase.kind === "ready" && (
         <>
           <DictionaryHeader
@@ -124,6 +111,7 @@ export function DictionaryPopup(props: Props) {
             onAskAI={onAskAI}
             aiLoading={aiLoading}
             aiDone={Boolean(aiStreamText)}
+            autoAskAI={autoAskAI}
             targetLanguage={targetLanguage}
           />
           <Separator />

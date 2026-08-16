@@ -96,4 +96,13 @@ assert.equal(triggerOffset.placement, "right");
 assert.equal(triggerOffset.left, 438);
 assert.equal(triggerOffset.top, 97);
 
+const triggerNearPointer = computeSelectionTriggerPosition(
+  { left: 12, right: 2148, top: 20, bottom: 196, width: 2136, height: 176 },
+  { width: 36, height: 36 },
+  { width: 2200, height: 300, offsetLeft: 0, offsetTop: 0 },
+  { x: 908, y: 40 },
+);
+assert.equal(triggerNearPointer.left, 916, "wide selections anchor the trigger near the mouse pointer");
+assert.equal(triggerNearPointer.top, 48, "wide selections keep the trigger just below the mouse pointer");
+
 console.log("PASS: popup positioning chooses side placement and respects viewport offsets.");

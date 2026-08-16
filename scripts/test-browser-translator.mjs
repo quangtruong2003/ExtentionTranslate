@@ -153,6 +153,28 @@ assert.deepEqual(rawCalls, [
   ["create", { sourceLanguage: "en", targetLanguage: "vi" }],
 ]);
 
+const formattedCalls = [];
+const formattedTranslator = new BrowserDictionaryTranslator(() => ({
+  async availability() {
+    return "available";
+  },
+  async create() {
+    return {
+      async translate(input) {
+        formattedCalls.push(input);
+        return `VI:${input}`;
+      },
+      destroy() {},
+    };
+  },
+}));
+assert.equal(
+  await formattedTranslator.translateText("The sentence.\n\nA. between\nB. any", "en", "vi"),
+  "VI:The sentence.\n\nVI:A. between\nVI:B. any",
+  "browser text translation preserves source line breaks",
+);
+assert.deepEqual(formattedCalls, ["The sentence.", "A. between", "B. any"]);
+
 let delayedResolve;
 let concurrentCreateCalls = 0;
 const concurrentTranslator = new BrowserDictionaryTranslator(() => ({

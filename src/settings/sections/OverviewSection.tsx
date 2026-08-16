@@ -1,8 +1,8 @@
-import { CheckCircle2, KeyRound, Languages, MousePointer2, Sparkles } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { ChevronRight, KeyRound, Languages, MousePointer2, Sparkles, type LucideIcon } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SELECTION_TRIGGER_MODE_LABELS, SUPPORTED_TARGET_LANGUAGES, type ExtensionSettings } from "@/shared/types";
-import type { SettingsSectionId } from "../navigation";
+import { SETTINGS_NAVIGATION, type SettingsSectionId } from "../navigation";
 
 interface OverviewSectionProps {
   settings: ExtensionSettings;
@@ -10,60 +10,94 @@ interface OverviewSectionProps {
   onNavigate: (section: SettingsSectionId) => void;
 }
 
+interface StatTileProps {
+  icon: LucideIcon;
+  label: string;
+  value: string;
+  badge?: { text: string; tone: "positive" | "neutral" };
+}
+
+function StatTile({ icon: Icon, label, value, badge }: StatTileProps) {
+  return (
+    <div className="min-w-0 rounded-xl border bg-card p-4 shadow-sm">
+      <div className="flex items-center justify-between gap-2">
+        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
+          <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+        </span>
+        {badge && (
+          <Badge variant={badge.tone === "positive" ? "secondary" : "outline"} className="font-normal">
+            {badge.text}
+          </Badge>
+        )}
+      </div>
+      <p className="mt-3 text-xs font-medium text-muted-foreground">{label}</p>
+      <p className="mt-1 truncate text-sm font-semibold">{value}</p>
+    </div>
+  );
+}
+
 export function OverviewSection({ settings, hasApiKey, onNavigate }: OverviewSectionProps) {
   const displayLanguage = SUPPORTED_TARGET_LANGUAGES.find((language) => language.value === settings.targetLanguage)?.label ?? settings.targetLanguage;
+  const quickLinks = SETTINGS_NAVIGATION.filter((item) => item.id !== "overview");
 
   return (
     <section aria-labelledby="overview-section-title" className="w-full min-w-0 max-w-full space-y-6">
-      <Card className="min-w-0 max-w-full">
-        <CardHeader>
-          <CardTitle id="overview-section-title">Tổng quan</CardTitle>
-          <CardDescription className="break-words">ExtentionTranslate giúp bạn tra nghĩa tiếng Anh và nhận giải thích từ AI ngay khi đọc web.</CardDescription>
-        </CardHeader>
-        <CardContent className="grid min-w-0 gap-3 sm:grid-cols-2">
-          <div className="min-w-0 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <MousePointer2 className="h-4 w-4 text-primary" aria-hidden="true" />
-              Cách kích hoạt khi bôi đen
-            </div>
-            <p className="mt-2 break-words text-sm text-muted-foreground">{SELECTION_TRIGGER_MODE_LABELS[settings.selectionTriggerMode]}</p>
-          </div>
-          <div className="min-w-0 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Languages className="h-4 w-4 text-primary" aria-hidden="true" />
-              Ngôn ngữ hiển thị
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{displayLanguage}</p>
-          </div>
-          <div className="min-w-0 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <Sparkles className="h-4 w-4 text-primary" aria-hidden="true" />
-              Tự động hỏi AI
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{settings.autoAskAIOnPopup ? "Đang bật khi mở popup" : "Đang tắt"}</p>
-          </div>
-          <div className="min-w-0 rounded-lg border bg-muted/20 p-4">
-            <div className="flex items-center gap-2 text-sm font-medium">
-              <KeyRound className="h-4 w-4 text-primary" aria-hidden="true" />
-              OpenRouter API key
-            </div>
-            <p className="mt-2 text-sm text-muted-foreground">{hasApiKey ? "Đã cấu hình" : "Chưa cấu hình"}</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div>
+        <h2 id="overview-section-title" className="sr-only">Tổng quan</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          ExtentionTranslate giúp bạn tra nghĩa tiếng Anh và nhận giải thích từ AI ngay khi đọc web. Dưới đây là trạng thái hiện tại của tiện ích.
+        </p>
+      </div>
+
+      <div className="grid min-w-0 gap-3 sm:grid-cols-2">
+        <StatTile
+          icon={MousePointer2}
+          label="Cách kích hoạt khi bôi đen"
+          value={SELECTION_TRIGGER_MODE_LABELS[settings.selectionTriggerMode]}
+        />
+        <StatTile icon={Languages} label="Ngôn ngữ hiển thị" value={displayLanguage} />
+        <StatTile
+          icon={Sparkles}
+          label="Tự động hỏi AI"
+          value={settings.autoAskAIOnPopup ? "Bật khi mở popup" : "Đang tắt"}
+          badge={{ text: settings.autoAskAIOnPopup ? "Đang bật" : "Đang tắt", tone: settings.autoAskAIOnPopup ? "positive" : "neutral" }}
+        />
+        <StatTile
+          icon={KeyRound}
+          label="OpenRouter API key"
+          value={hasApiKey ? "Đã cấu hình" : "Chưa cấu hình"}
+          badge={{ text: hasApiKey ? "Sẵn sàng" : "Cần thiết lập", tone: hasApiKey ? "positive" : "neutral" }}
+        />
+      </div>
 
       <Card className="min-w-0 max-w-full">
         <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-base">
-            <CheckCircle2 className="h-4 w-4 text-primary" aria-hidden="true" />
-            Đi đến phần cài đặt
-          </CardTitle>
+          <CardTitle className="text-base">Đi đến phần cài đặt</CardTitle>
           <CardDescription>Chọn khu vực bạn muốn điều chỉnh.</CardDescription>
         </CardHeader>
-        <CardContent className="flex min-w-0 flex-wrap gap-2">
-          <Button type="button" variant="outline" className="max-w-full whitespace-normal text-center" onClick={() => onNavigate("popup")}>Popup & Từ điển</Button>
-          <Button type="button" variant="outline" className="max-w-full whitespace-normal text-center" onClick={() => onNavigate("openrouter")}>OpenRouter AI</Button>
-          <Button type="button" variant="outline" className="max-w-full whitespace-normal text-center" onClick={() => onNavigate("about")}>Giới thiệu</Button>
+        <CardContent className="min-w-0 p-0">
+          <nav aria-label="Đi đến phần cài đặt" className="divide-y border-t">
+            {quickLinks.map((item) => {
+              const Icon = item.icon;
+              return (
+                <button
+                  key={item.id}
+                  type="button"
+                  onClick={() => onNavigate(item.id)}
+                  className="group flex w-full items-center gap-3 px-6 py-4 text-left transition-colors hover:bg-accent/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                >
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border bg-muted/50">
+                    <Icon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="block text-sm font-medium">{item.title}</span>
+                    <span className="mt-0.5 block truncate text-xs text-muted-foreground">{item.description}</span>
+                  </span>
+                  <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" aria-hidden="true" />
+                </button>
+              );
+            })}
+          </nav>
         </CardContent>
       </Card>
     </section>

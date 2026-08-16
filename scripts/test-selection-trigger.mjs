@@ -130,6 +130,12 @@ assert.match(contentSource, /(?:onClick|addEventListener\(\s*["']click["'])/);
 assert.match(contentSource, /openPopup\s*\((?:currentSelectionInfo|selectionInfo|triggerSelectionInfo|info)/);
 assert.doesNotMatch(clickEvidence, /getCurrentSelection\s*\(/, "trigger activation uses the captured snapshot");
 
+const selectionChangeMatch = contentSource.match(/document\.addEventListener\(\s*"selectionchange"[\s\S]*?\n\s*true,\s*\n\s*\);/);
+assert.ok(selectionChangeMatch, "selectionchange cleanup remains a bounded contract surface");
+const selectionChangeSource = selectionChangeMatch?.[0] ?? "";
+assert.match(selectionChangeSource, /onSelectionEvent\(null\)/, "collapsed selections use the debounced selection flow");
+assert.doesNotMatch(selectionChangeSource, /closePopup\(\)/, "selectionchange does not close the trigger during an in-progress drag");
+
 const cleanupStart = contentSource.indexOf("function closePopup");
 const cleanupEnd = contentSource.indexOf("function stopAIStream", cleanupStart);
 assert.ok(cleanupStart >= 0 && cleanupEnd > cleanupStart, "popup and trigger cleanup share a bounded lifecycle surface");

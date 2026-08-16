@@ -5,11 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import { MESSAGE_TYPES } from "@/shared/constants";
 import type { ExtensionSettings } from "@/shared/types";
+import { SettingRow } from "../SettingRow";
 
 interface OpenRouterSectionProps {
   settings: ExtensionSettings;
@@ -73,24 +73,23 @@ export function OpenRouterSection({
   }
 
   return (
-    <section aria-labelledby="openrouter-section-title" className="w-full min-w-0 max-w-full">
+    <section aria-labelledby="openrouter-section-title" className="w-full min-w-0 max-w-full space-y-6">
+      <h2 id="openrouter-section-title" className="sr-only">OpenRouter AI</h2>
+
       <Card className="min-w-0 max-w-full">
         <CardHeader>
-          <CardTitle id="openrouter-section-title" className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            OpenRouter AI
+          <CardTitle className="flex items-center gap-2 text-base">
+            <KeyRound className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            Kết nối OpenRouter
           </CardTitle>
-          <CardDescription className="break-words">
+          <CardDescription>
             Cấu hình để sử dụng tính năng "Hỏi AI". Lấy API key tại{" "}
-            <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="font-medium text-primary hover:underline">openrouter.ai/keys</a>.
+            <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="font-medium underline hover:text-foreground">openrouter.ai/keys</a>.
           </CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="api-key" className="flex items-center gap-2 text-sm font-medium">
-              <KeyRound className="h-4 w-4" aria-hidden="true" />
-              OpenRouter API Key
-            </Label>
+            <Label htmlFor="api-key" className="text-sm font-medium">OpenRouter API Key</Label>
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
               <div className="relative w-full min-w-0 flex-1">
                 <Input
@@ -131,27 +130,38 @@ export function OpenRouterSection({
             <p className="text-xs text-muted-foreground">API key được lưu cục bộ trong trình duyệt và chỉ được dùng để gọi OpenRouter.</p>
           </div>
 
-          <div className="min-w-0 space-y-2" role="group" aria-labelledby="model-label">
+          <div className="min-w-0 space-y-2 border-t pt-5" role="group" aria-labelledby="model-label">
             <Label id="model-label" className="text-sm font-medium">Model</Label>
             <ModelSelector value={model} onChange={onModelChange} apiKey={apiKey} />
             <p className="text-xs text-muted-foreground">Tìm kiếm và chọn từ hơn 500+ model của OpenRouter. Có thể nhập model tuỳ chỉnh.</p>
           </div>
+        </CardContent>
+      </Card>
 
-          <div className="flex min-w-0 items-start justify-between gap-4 rounded-lg border bg-muted/20 p-4">
-            <div className="min-w-0 flex-1 space-y-1">
-              <Label htmlFor="openrouter-thinking" className="text-sm font-medium">Bật chế độ suy luận AI</Label>
-              <p className="text-xs leading-relaxed text-muted-foreground">Cho phép model hỗ trợ reasoning suy luận trước khi trả lời. Phần suy luận được thu gọn mặc định trong popup.</p>
-            </div>
-            <Switch
+      <Card className="min-w-0 max-w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Sparkles className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            Hành vi AI
+          </CardTitle>
+          <CardDescription>Điều chỉnh cách AI suy luận và trả lời trong popup.</CardDescription>
+        </CardHeader>
+        <CardContent className="min-w-0 space-y-5">
+          <div className="divide-y">
+            <SettingRow
               id="openrouter-thinking"
-              checked={settings.openRouterThinkingEnabled}
-              onCheckedChange={(openRouterThinkingEnabled) => onSettingsChange({ ...settings, openRouterThinkingEnabled })}
-            />
+              title="Bật chế độ suy luận AI"
+              description="Cho phép model hỗ trợ reasoning suy luận trước khi trả lời. Phần suy luận được thu gọn mặc định trong popup."
+            >
+              <Switch
+                id="openrouter-thinking"
+                checked={settings.openRouterThinkingEnabled}
+                onCheckedChange={(openRouterThinkingEnabled) => onSettingsChange({ ...settings, openRouterThinkingEnabled })}
+              />
+            </SettingRow>
           </div>
 
-          <Separator />
-
-          <div className="space-y-2">
+          <div className="space-y-2 border-t pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <Label htmlFor="system-prompt" className="text-sm font-medium">System Prompt</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={onResetSystemPrompt}>

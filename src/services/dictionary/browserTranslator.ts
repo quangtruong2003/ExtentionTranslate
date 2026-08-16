@@ -204,6 +204,14 @@ export class BrowserDictionaryTranslator {
     if (!session) return null;
 
     try {
+      const lines = trimmed.split(/\r\n?|\n/u);
+      if (lines.length > 1) {
+        const translatedLines: string[] = [];
+        for (const line of lines) {
+          translatedLines.push(line.trim() ? await translateNonEmptyText(session, line, signal) : line);
+        }
+        return translatedLines.join("\n");
+      }
       return await translateNonEmptyText(session, trimmed, signal);
     } catch (error) {
       if (isAbortError(error) || signal?.aborted) {

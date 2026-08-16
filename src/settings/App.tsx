@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Save } from "lucide-react";
+import { Loader2, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Toaster, toast } from "@/components/ui/sonner";
 import { DEFAULT_SETTINGS, type ExtensionSettings } from "@/shared/types";
@@ -61,7 +61,6 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [baseline, setBaseline] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("overview");
-
   useEffect(() => {
     void (async () => {
       try {
@@ -88,7 +87,9 @@ export function App() {
     return {
       selectionTriggerMode: settings.selectionTriggerMode,
       autoAskAIOnPopup: settings.autoAskAIOnPopup,
+      includeSelectionContext: settings.includeSelectionContext,
       targetLanguage: settings.targetLanguage,
+      theme: settings.theme,
       openRouterApiKey: apiKey.trim(),
       openRouterModel: model.trim() || DEFAULT_SETTINGS.openRouterModel,
       openRouterThinkingEnabled: settings.openRouterThinkingEnabled,
@@ -100,6 +101,18 @@ export function App() {
     const next = composeNext();
     return (Object.keys(next) as Array<keyof ExtensionSettings>).some((key) => next[key] !== baseline[key]);
   })();
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const apply = () => {
+      const effectiveDark = settings.theme === "dark" || (settings.theme !== "light" && media.matches);
+      root.classList.toggle("dark", effectiveDark);
+    };
+    apply();
+    media.addEventListener("change", apply);
+    return () => media.removeEventListener("change", apply);
+  }, [settings.theme]);
 
   useEffect(() => {
     if (!isDirty) return;
@@ -126,8 +139,16 @@ export function App() {
     }
   }
 
-  function handleResetSystemPrompt() {
+    function handleResetSystemPrompt() {
     setSystemPrompt(DEFAULT_SETTINGS.systemPrompt);
+  }
+
+  function handleDiscard() {
+    setSettings(baseline);
+    setApiKey(baseline.openRouterApiKey);
+    setModel(baseline.openRouterModel);
+    setSystemPrompt(baseline.systemPrompt);
+    setSaveState("idle");
   }
 
   if (!loaded) {
@@ -138,38 +159,21 @@ export function App() {
   const projectIconUrl = getProjectIconUrl();
 
   return (
-    <div className="min-h-screen w-full max-w-full overflow-x-hidden bg-muted/20 text-foreground">
-      <div className="mx-auto flex min-h-screen w-full min-w-0 max-w-full overflow-x-hidden flex-col lg:max-w-7xl lg:flex-row">
+    <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background text-foreground">
+      <div className="mx-auto flex min-h-screen w-full min-w-0 max-w-full overflow-x-clip flex-col lg:max-w-7xl lg:flex-row">
         <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
 
         <main className="w-full min-w-0 max-w-full flex-1">
-          <div className="mx-auto w-full min-w-0 max-w-full p-4 sm:p-6 lg:max-w-4xl lg:p-8">
-            <header className="sticky top-12 z-20 -mx-4 mb-6 flex items-center justify-between gap-3 border-b bg-background/95 px-4 py-3 backdrop-blur sm:-mx-6 sm:px-6 lg:top-0 lg:-mx-8 lg:px-8">
-              <div className="flex min-w-0 flex-1 items-center gap-3">
-                <img src={projectIconUrl} alt="ExtentionTranslate" className="h-10 w-10 shrink-0 rounded-lg" />
-                <div className="min-w-0">
-                  <p className="text-xs font-medium text-muted-foreground">ExtentionTranslate</p>
-                  <h1 className="truncate text-lg font-semibold tracking-tight">{activeNavigation.title}</h1>
-                  <p className="hidden text-sm text-muted-foreground sm:block">{activeNavigation.description}</p>
-                </div>
+          <div className="mx-auto w-full min-w-0 max-w-full p-4 pb-28 sm:p-6 sm:pb-28 lg:max-w-4xl lg:p-8 lg:pb-28">
+            <header className="mb-8">
+              <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <img src={projectIconUrl} alt="" className="h-4 w-4 rounded" />
+                <span>Cài đặt</span>
+                <span aria-hidden="true">/</span>
+                <span className="font-medium text-foreground">{activeNavigation.title}</span>
               </div>
-              <div className="flex shrink-0 items-center gap-2">
-                {saveState !== "idle" && (
-                  <span role="status" aria-live="polite" className={saveState === "error" ? "min-w-0 text-right text-xs text-destructive sm:text-sm" : "min-w-0 text-right text-xs text-emerald-600 sm:text-sm"}>
-                    {saveState === "saving" ? "Đang lưu…" : saveState === "saved" ? "Đã lưu" : "Lỗi khi lưu"}
-                  </span>
-                )}
-                <Button
-                  onClick={handleSave}
-                  disabled={saveState === "saving" || !isDirty}
-                  size="icon"
-                  aria-label={saveState === "saving" ? "Đang lưu cài đặt" : "Lưu cài đặt"}
-                  className="shrink-0 disabled:opacity-50 sm:w-auto sm:px-4"
-                >
-                  <Save className="h-4 w-4" aria-hidden="true" />
-                  <span className="sr-only sm:not-sr-only">{saveState === "saving" ? "Đang lưu…" : "Lưu"}</span>
-                </Button>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">{activeNavigation.title}</h1>
+              <p className="mt-1 text-sm text-muted-foreground">{activeNavigation.description}</p>
             </header>
 
             {activeSection === "overview" && <OverviewSection settings={settings} hasApiKey={Boolean(apiKey.trim())} onNavigate={setActiveSection} />}
@@ -193,6 +197,26 @@ export function App() {
           </div>
         </main>
       </div>
+
+      {isDirty && (
+        <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur">
+          <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
+            <p role="status" aria-live="polite" className="min-w-0 truncate text-sm text-muted-foreground">
+              {saveState === "saving" ? "Đang lưu thay đổi…" : saveState === "error" ? "Không thể lưu. Vui lòng thử lại." : "Bạn có thay đổi chưa lưu."}
+            </p>
+            <div className="flex shrink-0 items-center gap-2">
+              <Button type="button" variant="ghost" onClick={handleDiscard} disabled={saveState === "saving"}>
+                Hủy thay đổi
+              </Button>
+              <Button type="button" onClick={handleSave} disabled={saveState === "saving"}>
+                {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
+                {saveState === "saving" ? "Đang lưu…" : "Lưu thay đổi"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Toaster position="bottom-right" richColors closeButton />
     </div>
   );

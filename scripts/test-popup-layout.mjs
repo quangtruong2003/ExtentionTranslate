@@ -18,14 +18,21 @@ assert.doesNotMatch(contentSource, /popup\.style\.maxWidth = `\$\{/);
 
 console.log("PASS: popup width is content-sized between 340px and the viewport ceiling.");
 
-// Task 3: the visible close action is back by design (touch/discoverability) at popup level.
-assert.match(popupSource, /aria-label=\{labels\.close\}/);
-assert.match(popupSource, /relative flex/);
-assert.match(contentSource, /onClose=\{closePopup\}/);
-// Header actions moved below the phonetics row; top-right corner belongs to the X only.
-assert.match(headerSource, /justify-end gap-1/);
+// Task 3 (revised by user): no visible close button; header actions sit top-right again.
+assert.doesNotMatch(popupSource, /aria-label=\{labels\.close\}/);
+assert.doesNotMatch(contentSource, /onClose=\{closePopup\}/);
+assert.match(headerSource, /flex shrink-0 items-center gap-1/, "copy and ask-AI return to the header's top-right");
+assert.doesNotMatch(headerSource, /\bX\b/);
+// Borderless popup: no outer border ring.
+assert.doesNotMatch(popupSource, /rounded-xl border /, "the popup renders without an outer border");
 
-console.log("PASS: the popup has a visible close button.");
+console.log("PASS: the popup has no close button, no border, and header actions at the top-right.");
+
+// Auto-ask mode makes the header's Ask AI button redundant — hide it.
+assert.match(headerSource, /\{!autoAskAI && \(/, "the ask-AI button hides when auto-ask is on");
+assert.match(contentSource, /autoAskAI=\{settings\.autoAskAIOnPopup\}/, "the popup reads the live setting");
+
+console.log("PASS: the ask-AI button hides when auto-ask is enabled.");
 
 // Task 5: keyless empty state routes to Settings instead of a doomed request.
 const emptySource = await readFile(new URL("../src/components/dictionary/EmptyState.tsx", import.meta.url), "utf8");

@@ -24,7 +24,6 @@ const [appSource, sidebarSource, navigationSource, overviewSource, popupSource, 
 
 assert.match(appSource, /SettingsSidebar/);
 assert.match(appSource, /icons\/icon48\.png/);
-assert.match(appSource, /sticky/);
 assert.match(sidebarSource, /aria-current/);
 
 for (const id of ["overview", "popup", "openrouter", "about"]) {
@@ -35,23 +34,28 @@ for (const section of ["OverviewSection", "PopupDictionarySection", "OpenRouterS
   assert.match(appSource, new RegExp(`<${section}`));
 }
 
-assert.match(appSource, /<header[^>]*sticky[\s\S]*?onClick=\{handleSave\}/);
+// Sticky save bar pinned to the bottom, shown only while dirty.
+assert.match(appSource, /isDirty && \(\s*<div className="fixed inset-x-0 bottom-0/);
+assert.match(appSource, /onClick=\{handleSave\}/);
+assert.match(appSource, /onClick=\{handleDiscard\}/);
 assert.doesNotMatch(appSource, /hidden text-sm text-(?:destructive|emerald-600) sm:inline/);
 assert.match(sidebarSource, /h-12[\s\S]*lg:hidden/);
-assert.match(appSource, /<header[^>]*sticky top-12[\s\S]*lg:top-0/);
 assert.doesNotMatch(appSource, /top-\[49px\]/);
-assert.match(appSource, /className="min-h-screen w-full max-w-full overflow-x-hidden/);
-assert.match(appSource, /className="mx-auto flex min-h-screen w-full min-w-0 max-w-full overflow-x-hidden[^"]*lg:max-w-7xl/);
+assert.match(appSource, /className="min-h-screen w-full max-w-full overflow-x-clip/);
+assert.match(appSource, /className="mx-auto flex min-h-screen w-full min-w-0 max-w-full overflow-x-clip[^"]*lg:max-w-7xl/);
+assert.doesNotMatch(appSource, /overflow-x-hidden/);
 assert.match(appSource, /<main className="w-full min-w-0 max-w-full flex-1">/);
 assert.match(appSource, /className="mx-auto w-full min-w-0 max-w-full[^"]*lg:max-w-4xl/);
-assert.match(sidebarSource, /className="sticky top-0[^"]*h-12 w-full min-w-0 max-w-full[^"]*overflow-x-auto[^"]*overflow-y-hidden[^"]*lg:hidden"/);
+assert.match(sidebarSource, /className="sticky top-0 z-30 flex h-12 w-full min-w-0 max-w-full[^"]*overflow-x-auto[^"]*overflow-y-hidden[^"]*lg:hidden"/);
 assert.match(sidebarSource, /overflow-x-auto[^"\n]*\[scrollbar-width:none\][^"\n]*\[&::\-webkit-scrollbar\]:hidden/);
-assert.match(appSource, /<Button[\s\S]*?size="icon"[\s\S]*?aria-label=\{saveState === "saving" \? "Đang lưu cài đặt" : "Lưu cài đặt"\}[\s\S]*?<span className="sr-only sm:not-sr-only">/);
+assert.match(sidebarSource, /sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r bg-background lg:flex/);
+assert.match(sidebarSource, /Phiên bản/);
 assert.doesNotMatch(appSource, /BookOpen/);
 assert.match(overviewSource, /Tổng quan/);
 assert.match(popupSource, /selectionTriggerMode/);
+assert.match(popupSource, /name="selection-trigger-mode"/);
 for (const mode of ["icon", "popup", "off"]) {
-  assert.match(popupSource, /selection-trigger-\$\{mode\}/);
+  assert.match(popupSource, new RegExp(`value: "${mode}"`));
 }
 assert.match(openRouterSource, /ModelSelector/);
 assert.match(aboutSource, /dictionaryapi\.dev/);
@@ -61,11 +65,17 @@ for (const sectionSource of [overviewSource, popupSource, openRouterSource, abou
   assert.match(sectionSource, /<Card className="min-w-0 max-w-full">/);
 }
 
-assert.equal([...overviewSource.matchAll(/className="max-w-full whitespace-normal text-center"/g)].length, 3);
-assert.match(popupSource, /<fieldset/);
+// Overview quick links render every non-overview section as a row button.
+assert.match(overviewSource, /SETTINGS_NAVIGATION\.filter\(\(item\) => item\.id !== "overview"\)/);
+assert.match(overviewSource, /onNavigate\(item\.id\)/);
+assert.match(popupSource, /RadioCardGroup/);
 assert.match(popupSource, /Khi bôi đen văn bản/);
 assert.match(popupSource, /type="radio"/);
+assert.match(popupSource, /includeSelectionContext/);
+assert.match(popupSource, /id="ai-context"/);
+assert.match(popupSource, /Gửi ngữ cảnh xung quanh cho AI/);
+assert.match(popupSource, /popup-preview-theme/);
 assert.match(openRouterSource, /className="flex min-w-0 flex-col gap-2 sm:flex-row"/);
 assert.match(openRouterSource, /className="flex flex-wrap items-center justify-between gap-3"/);
 
-console.log("PASS: settings shell exposes responsive navigation, sticky save access, and all section owners.");
+console.log("PASS: settings shell exposes responsive navigation, sticky save bar, and all section owners.");

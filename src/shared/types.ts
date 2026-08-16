@@ -90,6 +90,8 @@ export type TargetLanguage = "en" | "vi" | "zh-CN";
 
 export type SelectionTriggerMode = "icon" | "popup" | "off";
 
+export type ThemePreference = "auto" | "light" | "dark";
+
 export type StoredSettings = Partial<Omit<ExtensionSettings, "selectionTriggerMode">> & {
   selectionTriggerMode?: unknown;
   showPopupOnSelection?: unknown;
@@ -100,7 +102,9 @@ export type TranslationStatus = "source" | "translating" | "translated" | "parti
 export interface ExtensionSettings {
   selectionTriggerMode: SelectionTriggerMode;
   autoAskAIOnPopup: boolean;
+  includeSelectionContext: boolean;
   targetLanguage: TargetLanguage;
+  theme: ThemePreference;
   openRouterApiKey: string;
   openRouterModel: string;
   openRouterThinkingEnabled: boolean;
@@ -110,7 +114,9 @@ export interface ExtensionSettings {
 export interface PopupSettings {
   selectionTriggerMode: SelectionTriggerMode;
   autoAskAIOnPopup: boolean;
+  includeSelectionContext: boolean;
   targetLanguage: TargetLanguage;
+  theme: ThemePreference;
   hasOpenRouterApiKey: boolean;
   openRouterThinkingEnabled: boolean;
 }
@@ -118,7 +124,9 @@ export interface PopupSettings {
 export const DEFAULT_SETTINGS: ExtensionSettings = {
   selectionTriggerMode: "icon",
   autoAskAIOnPopup: false,
+  includeSelectionContext: true,
   targetLanguage: "vi",
+  theme: "auto",
   openRouterApiKey: "",
   openRouterModel: "openrouter/auto",
   openRouterThinkingEnabled: true,
@@ -159,11 +167,15 @@ export function normalizeSettings(stored: StoredSettings | undefined): Extension
     : raw.showPopupOnSelection === false
       ? "off"
       : "icon";
+  const theme: ThemePreference = raw.theme === "light" || raw.theme === "dark" ? raw.theme : "auto";
+  const includeSelectionContext = raw.includeSelectionContext !== false;
   const { selectionTriggerMode: _storedMode, showPopupOnSelection: _legacyMode, ...canonicalSettings } = raw;
   return {
     ...DEFAULT_SETTINGS,
     ...canonicalSettings,
+    includeSelectionContext,
     selectionTriggerMode,
+    theme,
   };
 }
 
@@ -171,7 +183,9 @@ export function toPopupSettings(settings: ExtensionSettings): PopupSettings {
   return {
     selectionTriggerMode: settings.selectionTriggerMode,
     autoAskAIOnPopup: settings.autoAskAIOnPopup,
+    includeSelectionContext: settings.includeSelectionContext,
     targetLanguage: settings.targetLanguage,
+    theme: settings.theme,
     hasOpenRouterApiKey: settings.openRouterApiKey.trim().length > 0,
     openRouterThinkingEnabled: settings.openRouterThinkingEnabled,
   };

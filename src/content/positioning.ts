@@ -20,6 +20,11 @@ export interface Viewport {
   offsetTop?: number;
 }
 
+export interface PointerPosition {
+  x: number;
+  y: number;
+}
+
 function clamp(value: number, min: number, max: number): number {
   return Math.max(min, Math.min(max, value));
 }
@@ -100,6 +105,7 @@ export function computeSelectionTriggerPosition(
   rect: DOMRect,
   trigger: PopupSize = { width: 36, height: 36 },
   viewport: Viewport = getPopupViewport(),
+  pointerPosition?: PointerPosition,
 ): Position {
   const pad = 8;
   const gap = 8;
@@ -115,6 +121,34 @@ export function computeSelectionTriggerPosition(
   const clampTop = (top: number) => clamp(top, minTop, maxBottom - height);
   const verticallyCentered = clampTop(rect.top + (rect.height - height) / 2);
   const horizontallyCentered = clampLeft(rect.left + (rect.width - width) / 2);
+
+  if (pointerPosition) {
+    const pointerRight = pointerPosition.x + gap;
+    const pointerLeft = pointerPosition.x - gap - width;
+    const pointerBelow = pointerPosition.y + gap;
+    const pointerAbove = pointerPosition.y - gap - height;
+    const belowFits = pointerBelow + height <= maxBottom;
+    const aboveFits = pointerAbove >= minTop;
+
+    if (pointerRight + width <= maxRight && belowFits) {
+      return { left: pointerRight, top: pointerBelow, placement: "right" };
+    }
+    if (pointerLeft >= minLeft && belowFits) {
+      return { left: pointerLeft, top: pointerBelow, placement: "left" };
+    }
+    if (pointerRight + width <= maxRight && aboveFits) {
+      return { left: pointerRight, top: pointerAbove, placement: "right" };
+    }
+    if (pointerLeft >= minLeft && aboveFits) {
+      return { left: pointerLeft, top: pointerAbove, placement: "left" };
+    }
+    if (belowFits) {
+      return { left: clampLeft(pointerPosition.x - width / 2), top: pointerBelow, placement: "below" };
+    }
+    if (aboveFits) {
+      return { left: clampLeft(pointerPosition.x - width / 2), top: pointerAbove, placement: "above" };
+    }
+  }
 
   if (rect.right + gap + width <= maxRight) {
     return { left: rect.right + gap, top: verticallyCentered, placement: "right" };
