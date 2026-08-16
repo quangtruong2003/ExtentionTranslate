@@ -92,6 +92,11 @@ export type SelectionTriggerMode = "icon" | "popup" | "off";
 
 export type ThemePreference = "auto" | "light" | "dark";
 
+export type OpenRouterReasoningEffort = "low" | "medium" | "high";
+
+export const OPENROUTER_MAX_OUTPUT_TOKENS = { min: 512, max: 8192, default: 1600 } as const;
+export const OPENROUTER_REASONING_MAX_TOKENS = { min: 1024, max: 8192 } as const;
+
 export type StoredSettings = Partial<Omit<ExtensionSettings, "selectionTriggerMode">> & {
   selectionTriggerMode?: unknown;
   showPopupOnSelection?: unknown;
@@ -108,6 +113,9 @@ export interface ExtensionSettings {
   openRouterApiKey: string;
   openRouterModel: string;
   openRouterThinkingEnabled: boolean;
+  openRouterReasoningEffort: OpenRouterReasoningEffort;
+  openRouterReasoningMaxTokens: number | null;
+  openRouterMaxTokens: number;
   systemPrompt: string;
 }
 
@@ -130,6 +138,9 @@ export const DEFAULT_SETTINGS: ExtensionSettings = {
   openRouterApiKey: "",
   openRouterModel: "openrouter/auto",
   openRouterThinkingEnabled: true,
+  openRouterReasoningEffort: "low",
+  openRouterReasoningMaxTokens: null,
+  openRouterMaxTokens: OPENROUTER_MAX_OUTPUT_TOKENS.default,
   systemPrompt: `You are an expert multilingual English dictionary editor and language tutor.
 When the user selects a word or phrase, respond strictly in valid JSON (no markdown fences) using this exact schema:
 
@@ -156,8 +167,16 @@ Rules:
 - Highlight the most common usage for learners.
 - Include 1–3 concise examples.
 - Keep the explanation short (under 120 words).
-- Output JSON only, no prose, no code fences.`,
+  - Output JSON only, no prose, no code fences.`,
 };
+
+function isOpenRouterReasoningEffort(value: unknown): value is OpenRouterReasoningEffort {
+  return value === "low" || value === "medium" || value === "high";
+}
+
+function isIntegerInRange(value: unknown, min: number, max: number): value is number {
+  return typeof value === "number" && Number.isInteger(value) && value >= min && value <= max;
+}
 
 export function normalizeSettings(stored: StoredSettings | undefined): ExtensionSettings {
   const raw = stored ?? {};
@@ -169,6 +188,16 @@ export function normalizeSettings(stored: StoredSettings | undefined): Extension
       : "icon";
   const theme: ThemePreference = raw.theme === "light" || raw.theme === "dark" ? raw.theme : "auto";
   const includeSelectionContext = raw.includeSelectionContext !== false;
+  const openRouterMaxTokens = isIntegerInRange(raw.openRouterMaxTokens, OPENROUTER_MAX_OUTPUT_TOKENS.min, OPENROUTER_MAX_OUTPUT_TOKENS.max)
+    ? raw.openRouterMaxTokens
+    : OPENROUTER_MAX_OUTPUT_TOKENS.default;
+  const requestedReasoningMaxTokens = raw.openRouterReasoningMaxTokens;
+  const openRouterReasoningMaxTokens = requestedReasoningMaxTokens === null
+    ? null
+    : isIntegerInRange(requestedReasoningMaxTokens, OPENROUTER_REASONING_MAX_TOKENS.min, OPENROUTER_REASONING_MAX_TOKENS.max)
+      && requestedReasoningMaxTokens < openRouterMaxTokens
+      ? requestedReasoningMaxTokens
+      : null;
   const { selectionTriggerMode: _storedMode, showPopupOnSelection: _legacyMode, ...canonicalSettings } = raw;
   return {
     ...DEFAULT_SETTINGS,
@@ -176,7 +205,33 @@ export function normalizeSettings(stored: StoredSettings | undefined): Extension
     includeSelectionContext,
     selectionTriggerMode,
     theme,
+    openRouterReasoningEffort: isOpenRouterReasoningEffort(raw.openRouterReasoningEffort)
+      ? raw.openRouterReasoningEffort
+      : DEFAULT_SETTINGS.openRouterReasoningEffort,
+    openRouterReasoningMaxTokens,
+    openRouterMaxTokens,
   };
+}
+
+export function getOpenRouterSettingsValidationError(
+  settings: Pick<ExtensionSettings, "openRouterMaxTokens" | "openRouterReasoningMaxTokens">,
+): string | null {
+  if (!Number.isInteger(settings.openRouterMaxTokens)
+      || settings.openRouterMaxTokens < OPENROUTER_MAX_OUTPUT_TOKENS.min
+      || settings.openRouterMaxTokens > OPENROUTER_MAX_OUTPUT_TOKENS.max) {
+    return "Max output tokens phải nằm trong khoảng 512–8192.";
+  }
+  if (settings.openRouterReasoningMaxTokens !== null
+      && (!Number.isInteger(settings.openRouterReasoningMaxTokens)
+        || settings.openRouterReasoningMaxTokens < OPENROUTER_REASONING_MAX_TOKENS.min
+        || settings.openRouterReasoningMaxTokens > OPENROUTER_REASONING_MAX_TOKENS.max)) {
+    return "Reasoning budget phải nằm trong khoảng 1024–8192 hoặc để trống.";
+  }
+  if (settings.openRouterReasoningMaxTokens !== null
+      && settings.openRouterReasoningMaxTokens >= settings.openRouterMaxTokens) {
+    return "Reasoning budget phải nhỏ hơn Max output tokens.";
+  }
+  return null;
 }
 
 export function toPopupSettings(settings: ExtensionSettings): PopupSettings {
