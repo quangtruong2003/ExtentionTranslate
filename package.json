@@ -19,6 +19,7 @@
     "test:dictionary-remote-cancel": "node --experimental-strip-types scripts/test-dictionary-remote-cancel.mjs",
     "test:dictionary-translation-workflow": "node --experimental-strip-types scripts/test-dictionary-translation-workflow.mjs",
     "test:openrouter-stream": "node --experimental-strip-types scripts/test-openrouter-stream.mjs",
+    "test:openrouter-http-fallback": "node --experimental-strip-types scripts/test-openrouter-http-fallback.mjs",
     "test:background-stream": "node --experimental-strip-types scripts/test-background-stream-contract.mjs",
     "test:positioning": "node --experimental-strip-types scripts/test-positioning.mjs",
     "test:settings-layout": "node --experimental-strip-types scripts/test-settings-layout.mjs",

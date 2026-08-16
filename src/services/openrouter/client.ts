@@ -3,6 +3,7 @@ import { OPENROUTER_ENDPOINT } from "@/shared/constants";
 import type { AIExplanation, AIRequest, DictionaryEntry, DictionaryPhrase, TargetLanguage } from "@/shared/types";
 import type { OpenRouterModel, OpenRouterModelsResponse } from "@/shared/openrouter-types";
 import { extractFirstJSONObject } from "@/shared/utils";
+import { fetchOpenRouterWithReasoningFallback } from "./http";
 import { consumeOpenRouterStream } from "./sse";
 import { buildDictionaryLookupMessages, buildDictionaryTranslationMessages, buildOpenRouterGenerationParameters, buildOpenRouterMessages, buildOpenRouterStreamBody } from "./messages";
 
@@ -73,11 +74,24 @@ export async function callOpenRouter(
   assertConfig(config);
 
   const messages = buildOpenRouterMessages(config.systemPrompt, req);
+  const body = {
+    model: config.model,
+    messages,
+    temperature: 0.2,
+    ...buildOpenRouterGenerationParameters({
+      model: config.model,
+      thinkingEnabled: config.thinkingEnabled ?? true,
+      reasoningEffort: config.reasoningEffort,
+      reasoningMaxTokens: config.reasoningMaxTokens,
+      maxTokens: config.maxTokens,
+    }),
+    response_format: { type: "json_object" },
+  };
 
   let response: Response;
   try {
-    response = await fetch(OPENROUTER_ENDPOINT, {
-      method: "POST",
+    response = await fetchOpenRouterWithReasoningFallback({
+      url: OPENROUTER_ENDPOINT,
       signal: config.signal,
       headers: {
         "Content-Type": "application/json",
@@ -85,18 +99,7 @@ export async function callOpenRouter(
         "HTTP-Referer": "https://extention-translate.local",
         "X-Title": "ExtentionTranslate",
       },
-      body: JSON.stringify({
-        model: config.model,
-        messages,
-        temperature: 0.2,
-        ...buildOpenRouterGenerationParameters({
-          thinkingEnabled: config.thinkingEnabled ?? true,
-          reasoningEffort: config.reasoningEffort,
-          reasoningMaxTokens: config.reasoningMaxTokens,
-          maxTokens: config.maxTokens,
-        }),
-        response_format: { type: "json_object" },
-      }),
+      body,
     });
   } catch (err) {
     if ((err as { name?: string }).name === "AbortError") throw err;
@@ -137,10 +140,15 @@ export async function streamOpenRouter(
 ): Promise<StreamOpenRouterResult> {
   assertConfig(config);
   const messages = buildOpenRouterMessages(config.systemPrompt, req);
+  const body = buildOpenRouterStreamBody(config.model, messages, config.thinkingEnabled ?? true, {
+    reasoningEffort: config.reasoningEffort,
+    reasoningMaxTokens: config.reasoningMaxTokens,
+    maxTokens: config.maxTokens,
+  });
   let response: Response;
   try {
-    response = await fetch(OPENROUTER_ENDPOINT, {
-      method: "POST",
+    response = await fetchOpenRouterWithReasoningFallback({
+      url: OPENROUTER_ENDPOINT,
       signal: config.signal,
       headers: {
         "Content-Type": "application/json",
@@ -148,11 +156,7 @@ export async function streamOpenRouter(
         "HTTP-Referer": "https://extention-translate.local",
         "X-Title": "ExtentionTranslate",
       },
-      body: JSON.stringify(buildOpenRouterStreamBody(config.model, messages, config.thinkingEnabled ?? true, {
-        reasoningEffort: config.reasoningEffort,
-        reasoningMaxTokens: config.reasoningMaxTokens,
-        maxTokens: config.maxTokens,
-      })),
+      body,
     });
   } catch (err) {
     if ((err as { name?: string }).name === "AbortError") throw err;

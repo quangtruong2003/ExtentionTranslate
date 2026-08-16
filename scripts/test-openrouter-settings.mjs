@@ -35,9 +35,18 @@ assert.deepEqual(
   buildOpenRouterGenerationParameters({ thinkingEnabled: true, reasoningEffort: "high", reasoningMaxTokens: 1200, maxTokens: 2400 }),
   { max_tokens: 2400, reasoning: { max_tokens: 1200 } },
 );
+assert.deepEqual(
+  buildOpenRouterGenerationParameters({ model: "openrouter/auto", thinkingEnabled: true, reasoningEffort: "high", maxTokens: 8192 }),
+  { max_tokens: 8192 },
+);
+assert.deepEqual(
+  buildOpenRouterGenerationParameters({ model: "openai/o3-mini", thinkingEnabled: true, reasoningEffort: "high", maxTokens: 8192 }),
+  { max_tokens: 8192, reasoning: { effort: "high" } },
+);
 
 const clientSource = await readFile(new URL("../src/services/openrouter/client.ts", import.meta.url), "utf8");
 assert.match(clientSource, /buildOpenRouterGenerationParameters/);
+assert.match(clientSource, /fetchOpenRouterWithReasoningFallback/);
 assert.doesNotMatch(clientSource, /max_tokens: 700/);
 
 console.log("PASS: OpenRouter reasoning and token settings default, migrate, and validate safely.");

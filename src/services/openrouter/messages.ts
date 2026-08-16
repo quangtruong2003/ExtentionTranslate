@@ -18,10 +18,16 @@ export interface OpenRouterMessage {
 const AI_STREAM_MAX_TOKENS = 1600;
 
 export interface OpenRouterGenerationOptions {
+  model?: string;
   thinkingEnabled?: boolean;
   reasoningEffort?: OpenRouterReasoningEffort;
   reasoningMaxTokens?: number | null;
   maxTokens?: number;
+}
+
+function supportsReasoningOptions(model: string | undefined): boolean {
+  const normalizedModel = model?.trim().toLowerCase();
+  return normalizedModel !== "openrouter/auto" && normalizedModel !== "openrouter/free";
 }
 
 export function buildOpenRouterGenerationParameters(options: OpenRouterGenerationOptions = {}) {
@@ -34,7 +40,7 @@ export function buildOpenRouterGenerationParameters(options: OpenRouterGeneratio
       : { effort: (options.reasoningEffort ?? "low") as OpenRouterReasoningEffort };
   return {
     max_tokens: options.maxTokens ?? AI_STREAM_MAX_TOKENS,
-    reasoning,
+    ...(supportsReasoningOptions(options.model) ? { reasoning } : {}),
   };
 }
 
@@ -65,7 +71,7 @@ export function buildOpenRouterStreamBody(
     model,
     messages,
     temperature: 0.2,
-    ...buildOpenRouterGenerationParameters({ ...options, thinkingEnabled }),
+    ...buildOpenRouterGenerationParameters({ ...options, model, thinkingEnabled }),
     stream: true,
   };
 }

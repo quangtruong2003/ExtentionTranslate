@@ -27,22 +27,29 @@ assert.doesNotMatch(promptMessages[1].content, /Target language:/);
 const thinkingBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, true);
 assert.equal(thinkingBody.stream, true);
 assert.equal(thinkingBody.max_tokens, 1600);
-assert.deepEqual(thinkingBody.reasoning, { effort: "low" });
+assert.equal("reasoning" in thinkingBody, false, "dynamic routers must omit reasoning options");
 assert.equal("response_format" in thinkingBody, false);
 
 const noThinkingBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, false);
-assert.deepEqual(noThinkingBody.reasoning, { effort: "none" });
+assert.equal("reasoning" in noThinkingBody, false, "dynamic routers must omit reasoning options when disabled");
+const freeRouterBody = buildOpenRouterStreamBody("openrouter/free", promptMessages, true, { reasoningEffort: "high" });
+assert.equal("reasoning" in freeRouterBody, false, "free dynamic routers must omit reasoning options");
 const mediumBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, true, { reasoningEffort: "medium", maxTokens: 2400 });
 assert.equal(mediumBody.max_tokens, 2400);
-assert.deepEqual(mediumBody.reasoning, { effort: "medium" });
+assert.equal("reasoning" in mediumBody, false, "dynamic routers must omit selected effort");
 const exactBudgetBody = buildOpenRouterStreamBody(
   "openrouter/auto",
   promptMessages,
   true,
   { reasoningEffort: "high", reasoningMaxTokens: 1200, maxTokens: 2400 },
 );
-assert.deepEqual(exactBudgetBody.reasoning, { max_tokens: 1200 });
-assert.equal("effort" in exactBudgetBody.reasoning, false);
+assert.equal("reasoning" in exactBudgetBody, false, "dynamic routers must omit exact reasoning budgets");
+const fixedReasoningBody = buildOpenRouterStreamBody("openai/o3-mini", promptMessages, true, {
+  reasoningEffort: "high",
+  maxTokens: 8192,
+});
+assert.deepEqual(fixedReasoningBody.reasoning, { effort: "high" });
+
 const translationMessages = buildDictionaryTranslationMessages({ word: "run", meanings: [] }, "vi");
 assert.match(translationMessages[0].content, /Vietnamese/);
 assert.match(translationMessages[1].content, /"word":"run"/);
