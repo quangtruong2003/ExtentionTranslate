@@ -177,14 +177,18 @@ function getDomText(node) {
   return [node?.nodeValue ?? "", ...(node?.children ?? []).map(getDomText)].join(" ");
 }
 
-async function clickDomNode(command, nodeId) {
+async function getDomNodeCenter(command, nodeId) {
   const box = await command("DOM.getBoxModel", { nodeId });
   const border = box.result?.model?.border;
   if (!border || border.length < 8) throw new Error("DOM node could not be measured for click.");
-  const point = {
+  return {
     x: (border[0] + border[2] + border[4] + border[6]) / 4,
     y: (border[1] + border[3] + border[5] + border[7]) / 4,
   };
+}
+
+async function clickDomNode(command, nodeId) {
+  const point = await getDomNodeCenter(command, nodeId);
   await command("Input.dispatchMouseEvent", { type: "mousePressed", x: point.x, y: point.y, button: "left", buttons: 1, clickCount: 1 });
   await command("Input.dispatchMouseEvent", { type: "mouseReleased", x: point.x, y: point.y, button: "left", buttons: 0, clickCount: 1 });
   return point;
@@ -303,7 +307,7 @@ async function main() {
       (node) => node.nodeName === "DIV" && node.attributes?.includes("role") && node.attributes?.includes("dialog"),
     );
     if (preActivationDialog) throw new Error("Icon mode opened the dictionary popup before activation.");
-    const triggerPoint = await clickDomNode(command, triggerNode.nodeId);
+    const triggerPoint = await getDomNodeCenter(command, triggerNode.nodeId);
     const triggerHitTest = await evaluate(command, `(() => {
       const host = document.getElementById('extention-translate-host');
       const hit = document.elementFromPoint(${triggerPoint.x}, ${triggerPoint.y});
@@ -312,6 +316,7 @@ async function main() {
     if (triggerHitTest?.hitId !== "extention-translate-host") {
       throw new Error(`Selection trigger is not hit-testable at its rendered button position: ${JSON.stringify({ triggerPoint, triggerHitTest })}`);
     }
+    await clickDomNode(command, triggerNode.nodeId);
     let popupContentVisible = false;
     for (let attempt = 0; attempt < 12; attempt += 1) {
       const dom = await command("DOM.getDocument", { depth: -1, pierce: true });
