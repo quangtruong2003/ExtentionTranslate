@@ -13,6 +13,8 @@ export interface OpenRouterMessage {
   content: string;
 }
 
+const AI_STREAM_MAX_TOKENS = 1600;
+
 export function buildOpenRouterMessages(
   systemPrompt: string,
   req: OpenRouterPromptRequest,
@@ -39,8 +41,8 @@ export function buildOpenRouterStreamBody(
     model,
     messages,
     temperature: 0.2,
-    max_tokens: 700,
-    reasoning: thinkingEnabled ? { enabled: true } : { effort: "none" },
+    max_tokens: AI_STREAM_MAX_TOKENS,
+    reasoning: thinkingEnabled ? { effort: "low" } : { effort: "none" },
     stream: true,
   };
 }

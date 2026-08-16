@@ -226,6 +226,13 @@ export function consumeOpenRouterSSE(
       if (finalContent) {
         events.push(...contentParser.consumeSnapshot(finalContent));
       }
+      if (choice?.finish_reason === "length") {
+        events.push({
+          type: "error",
+          code: "TRUNCATED_RESPONSE",
+          message: "OpenRouter response reached the token limit.",
+        });
+      }
     } catch {
       // Ignore malformed provider frames and keep the stream alive.
     }
@@ -259,6 +266,9 @@ export async function consumeOpenRouterStream(
         thinking += event.text;
         onThinking(event.text);
       } else if (event.type === "error") {
+        if (event.code === ERROR_CODES.TRUNCATED_RESPONSE) {
+          throw new ExtensionError(ERROR_CODES.TRUNCATED_RESPONSE, "", true);
+        }
         throw createOpenRouterStreamError(event.code, event.message);
       } else {
         sawDone = true;

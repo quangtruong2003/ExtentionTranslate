@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { consumeOpenRouterSSE, consumeOpenRouterStream } from "../src/services/openrouter/sse.ts";
 import { buildDictionaryTranslationMessages, buildOpenRouterMessages, buildOpenRouterStreamBody } from "../src/services/openrouter/messages.ts";
 import { getPopupCopy } from "../src/components/dictionary/copy.ts";
+import { ERROR_CODES, mapOpenRouterErrorCode } from "../src/shared/errors.ts";
 
 function streamFromText(text, chunkSize = text.length || 1) {
   const encoded = new TextEncoder().encode(text);
@@ -25,7 +26,8 @@ assert.match(promptMessages[1].content, /Selected text: run/);
 assert.doesNotMatch(promptMessages[1].content, /Target language:/);
 const thinkingBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, true);
 assert.equal(thinkingBody.stream, true);
-assert.deepEqual(thinkingBody.reasoning, { enabled: true });
+assert.equal(thinkingBody.max_tokens, 1600);
+assert.deepEqual(thinkingBody.reasoning, { effort: "low" });
 assert.equal("response_format" in thinkingBody, false);
 
 const noThinkingBody = buildOpenRouterStreamBody("openrouter/auto", promptMessages, false);
@@ -49,6 +51,24 @@ const second = consumeOpenRouterSSE(
 );
 assert.deepEqual(second.events, [{ type: "chunk", text: "thế giới" }, { type: "done" }]);
 assert.equal(second.remainder, "");
+
+const truncated = consumeOpenRouterSSE(
+  'data: {"choices":[{"delta":{"content":"partial answer"},"finish_reason":"length"}]}'
+  + "\n\n",
+);
+assert.deepEqual(truncated.events, [
+  { type: "chunk", text: "partial answer" },
+  { type: "error", code: "TRUNCATED_RESPONSE", message: "OpenRouter response reached the token limit." },
+]);
+const truncatedChunks = [];
+await assert.rejects(
+  () => consumeOpenRouterStream(
+    streamFromText('data: {"choices":[{"delta":{"content":"partial answer"},"finish_reason":"length"}]}\n\ndata: [DONE]\n\n'),
+    (text) => truncatedChunks.push(text),
+  ),
+  (error) => error?.code === "TRUNCATED_RESPONSE",
+);
+assert.deepEqual(truncatedChunks, ["partial answer"]);
 
 const ignored = consumeOpenRouterSSE(
   'data: {"choices":[{"delta":{}}]}\n\ndata: {"choices":[]}\n\n',
@@ -342,5 +362,7 @@ await assert.rejects(
 assert.equal(getPopupCopy("en").errorMessage("EMPTY_RESPONSE"), "The AI returned an empty response. Please try again.");
 assert.equal(getPopupCopy("vi").errorMessage("EMPTY_RESPONSE"), "AI trả về phản hồi trống. Vui lòng thử lại.");
 assert.equal(getPopupCopy("zh-CN").errorMessage("EMPTY_RESPONSE"), "AI 返回了空响应，请重试。");
+assert.equal(getPopupCopy("vi").errorMessage("TRUNCATED_RESPONSE"), "Phản hồi AI bị cắt do giới hạn token. Vui lòng thử lại.");
+assert.equal(mapOpenRouterErrorCode("max_tokens_exceeded", ""), ERROR_CODES.TRUNCATED_RESPONSE);
 
 console.log("PASS: OpenRouter SSE parser keeps answer and readable thinking streams separate.");

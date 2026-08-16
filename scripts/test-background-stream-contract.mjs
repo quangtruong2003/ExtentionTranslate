@@ -40,4 +40,10 @@ assert.deepEqual(partialErrorEvents, [
   { type: "error", code: "BAD_RESPONSE" },
 ]);
 
+const truncatedEvents = [];
+await runAIStreamOnPort({ postMessage: (event) => truncatedEvents.push(event) }, request, async () => {
+  throw Object.assign(new Error("response reached the token limit"), { code: "TRUNCATED_RESPONSE" });
+});
+assert.deepEqual(truncatedEvents, [{ type: "error", code: "TRUNCATED_RESPONSE" }]);
+
 console.log("PASS: background stream contract strips target language and orders port events.");

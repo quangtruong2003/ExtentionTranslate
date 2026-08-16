@@ -24,6 +24,7 @@ export const ERROR_CODES = {
   RATE_LIMITED: "RATE_LIMITED",
   UNKNOWN_MODEL: "UNKNOWN_MODEL",
   BAD_RESPONSE: "BAD_RESPONSE",
+  TRUNCATED_RESPONSE: "TRUNCATED_RESPONSE",
   EMPTY_RESPONSE: "EMPTY_RESPONSE",
   NO_RESULT: "NO_RESULT",
   INTERNAL: "INTERNAL",
@@ -35,6 +36,7 @@ export type ErrorCode = (typeof ERROR_CODES)[keyof typeof ERROR_CODES];
 export function mapOpenRouterErrorCode(providerCode: unknown, message: string): ErrorCode {
   const details = `${typeof providerCode === "string" || typeof providerCode === "number" ? providerCode : ""} ${message}`.toLowerCase();
   if (/api.?key|unauthoriz|authentication|\b401\b|\b403\b/.test(details)) return ERROR_CODES.INVALID_API_KEY;
+  if (/context.?length|max.?tokens|token.?limit|truncat/.test(details)) return ERROR_CODES.TRUNCATED_RESPONSE;
   if (/rate|limit|quota|too many requests|\b429\b/.test(details)) return ERROR_CODES.RATE_LIMITED;
   if (/timeout|timed out|deadline|gateway timeout|\b408\b|\b504\b/.test(details)) return ERROR_CODES.TIMEOUT;
   if (/model|no endpoints|\b404\b/.test(details)) return ERROR_CODES.UNKNOWN_MODEL;
@@ -64,6 +66,8 @@ export function userMessageFor(code: string): string {
       return "Model OpenRouter không tồn tại hoặc không khả dụng.";
     case ERROR_CODES.BAD_RESPONSE:
       return "Phản hồi từ máy chủ không hợp lệ.";
+    case ERROR_CODES.TRUNCATED_RESPONSE:
+      return "Phản hồi AI bị cắt do giới hạn token. Vui lòng thử lại.";
     case ERROR_CODES.EMPTY_RESPONSE:
       return "AI trả về phản hồi trống. Vui lòng thử lại.";
     case ERROR_CODES.NO_RESULT:
