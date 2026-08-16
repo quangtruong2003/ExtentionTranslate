@@ -10,15 +10,16 @@ interface Props {
   activeTab: PopupTab;
   aiLoading: boolean;
   targetLanguage: TargetLanguage;
+  primaryLabel?: string;
   onChange: (tab: PopupTab) => void;
 }
 
-export function PopupTabs({ activeTab, aiLoading, targetLanguage, onChange }: Props) {
+export function PopupTabs({ activeTab, aiLoading, targetLanguage, primaryLabel, onChange }: Props) {
   const copy = getPopupCopy(targetLanguage);
   const dictionaryButtonRef = useRef<HTMLButtonElement>(null);
   const aiButtonRef = useRef<HTMLButtonElement>(null);
   const tabs: Array<{ id: PopupTab; label: string; icon: typeof BookOpen }> = [
-    { id: "dictionary", label: copy.dictionaryTab, icon: BookOpen },
+    { id: "dictionary", label: primaryLabel ?? copy.dictionaryTab, icon: BookOpen },
     { id: "ai", label: copy.aiTab, icon: Sparkles },
   ];
 

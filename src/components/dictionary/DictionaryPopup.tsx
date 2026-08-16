@@ -8,6 +8,7 @@ import { ErrorState } from "./ErrorState";
 import { EmptyState } from "./EmptyState";
 import { AISection } from "./AISection";
 import { PopupTabs, type PopupTab } from "./PopupTabs";
+import { TextTranslationPanel } from "./TextTranslationPanel";
 import type { DictionaryEntry, TargetLanguage, TranslationStatus } from "@/shared/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getPopupCopy } from "./copy";
@@ -16,7 +17,10 @@ export type PopupPhase =
   | { kind: "loading" }
   | { kind: "ready"; entry: DictionaryEntry }
   | { kind: "error"; code: string }
-  | { kind: "empty" };
+  | { kind: "empty" }
+  | { kind: "translation-loading"; sourceText: string }
+  | { kind: "translation-ready"; sourceText: string; translatedText: string; provider: "browser" | "source" }
+  | { kind: "translation-error"; sourceText: string; code: "TRANSLATOR_UNAVAILABLE" | "TRANSLATION_FAILED" };
 
 interface Props {
   word: string;
@@ -56,6 +60,7 @@ export function DictionaryPopup(props: Props) {
   } = props;
   const labels = getPopupCopy(targetLanguage);
   const rootRef = useRef<HTMLDivElement>(null);
+  const isTranslationPhase = phase.kind === "translation-loading" || phase.kind === "translation-ready" || phase.kind === "translation-error";
 
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={100}>
@@ -79,10 +84,21 @@ export function DictionaryPopup(props: Props) {
         </>
       )}
 
-      <PopupTabs activeTab={activeTab} aiLoading={aiLoading} targetLanguage={targetLanguage} onChange={onTabChange} />
+      <PopupTabs
+        activeTab={activeTab}
+        aiLoading={aiLoading}
+        targetLanguage={targetLanguage}
+        primaryLabel={isTranslationPhase ? labels.translationTab : undefined}
+        onChange={onTabChange}
+      />
 
       {activeTab === "dictionary" && (
-        <div id="popup-panel-dictionary" className="min-w-0 max-w-full overflow-hidden" role="tabpanel" aria-label={labels.dictionaryTab}>
+        <div
+          id="popup-panel-dictionary"
+          className="min-w-0 max-w-full overflow-hidden"
+          role="tabpanel"
+          aria-label={isTranslationPhase ? labels.translationTab : labels.dictionaryTab}
+        >
           {phase.kind === "loading" && (
             <>
               <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-1">
@@ -136,6 +152,18 @@ export function DictionaryPopup(props: Props) {
               </div>
               <EmptyState onAskAI={onAskAI} aiLoading={aiLoading} hasApiKey={hasApiKey} targetLanguage={targetLanguage} />
             </>
+          )}
+
+          {isTranslationPhase && (
+            <ScrollArea className="max-h-[min(600px,calc(100vh-116px))]">
+              <TextTranslationPanel
+                phase={phase}
+                targetLanguage={targetLanguage}
+                hasApiKey={hasApiKey}
+                onRetry={onRetryLookup}
+                onAskAI={onAskAI}
+              />
+            </ScrollArea>
           )}
         </div>
       )}

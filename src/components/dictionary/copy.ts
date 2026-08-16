@@ -2,6 +2,7 @@ import type { TargetLanguage } from "@/shared/types";
 
 export interface PopupCopy {
   dictionaryTab: string;
+  translationTab: string;
   aiTab: string;
   tabListLabel: string;
   dialogLabel: (word: string) => string;
@@ -27,6 +28,14 @@ export interface PopupCopy {
   thinking: string;
   generatingResponse: string;
   retry: string;
+  originalText: string;
+  translatedText: string;
+  browserTranslationBadge: string;
+  translationPreparing: string;
+  translatorUnavailable: string;
+  translationFailed: string;
+  copyOriginal: string;
+  copyTranslation: string;
   aiNoResponse: string;
   noDictionaryResult: string;
   askAIForResult: string;
@@ -82,6 +91,7 @@ function errorMessage(language: TargetLanguage, code: string): string {
 const COPY: Record<TargetLanguage, PopupCopy> = {
   en: {
     dictionaryTab: "Dictionary",
+    translationTab: "Translation",
     aiTab: "OpenRouter",
     tabListLabel: "Explanation source",
     dialogLabel: (word) => `Dictionary lookup for ${word}`,
@@ -107,6 +117,14 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     thinking: "Thinking",
     generatingResponse: "Generating response…",
     retry: "Try again",
+    originalText: "Original text",
+    translatedText: "Translation",
+    browserTranslationBadge: "Browser translation",
+    translationPreparing: "Preparing translation…",
+    translatorUnavailable: "Browser translation is unavailable for this language pair.",
+    translationFailed: "Translation failed. Please try again.",
+    copyOriginal: "Copy original",
+    copyTranslation: "Copy translation",
     aiNoResponse: "AI has not responded.",
     noDictionaryResult: "No dictionary result was found for this item.",
     askAIForResult: "Ask AI for a result",
@@ -117,6 +135,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
   },
   vi: {
     dictionaryTab: "Từ điển",
+    translationTab: "Bản dịch",
     aiTab: "OpenRouter",
     tabListLabel: "Nguồn giải thích",
     dialogLabel: (word) => `Tra từ ${word}`,
@@ -142,6 +161,14 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     thinking: "Suy luận",
     generatingResponse: "Đang tạo câu trả lời…",
     retry: "Thử lại",
+    originalText: "Văn bản gốc",
+    translatedText: "Bản dịch",
+    browserTranslationBadge: "Dịch bằng trình duyệt",
+    translationPreparing: "Đang chuẩn bị bản dịch…",
+    translatorUnavailable: "Trình duyệt chưa hỗ trợ dịch cặp ngôn ngữ này.",
+    translationFailed: "Dịch thất bại. Vui lòng thử lại.",
+    copyOriginal: "Sao chép văn bản gốc",
+    copyTranslation: "Sao chép bản dịch",
     aiNoResponse: "AI chưa phản hồi.",
     noDictionaryResult: "Chưa có kết quả tra từ cho mục này.",
     askAIForResult: "Hỏi AI để có kết quả",
@@ -152,6 +179,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
   },
   "zh-CN": {
     dictionaryTab: "词典",
+    translationTab: "翻译",
     aiTab: "OpenRouter",
     tabListLabel: "解释来源",
     dialogLabel: (word) => `查询 ${word}`,
@@ -177,6 +205,14 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     thinking: "思考过程",
     generatingResponse: "正在生成回答…",
     retry: "重试",
+    originalText: "原文",
+    translatedText: "译文",
+    browserTranslationBadge: "浏览器翻译",
+    translationPreparing: "正在准备翻译…",
+    translatorUnavailable: "浏览器暂不支持这个语言组合。",
+    translationFailed: "翻译失败，请重试。",
+    copyOriginal: "复制原文",
+    copyTranslation: "复制译文",
     aiNoResponse: "AI 尚未返回结果。",
     noDictionaryResult: "未找到该词的词典结果。",
     askAIForResult: "询问 AI 获取结果",
