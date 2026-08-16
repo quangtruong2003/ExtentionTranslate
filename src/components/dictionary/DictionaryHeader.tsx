@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Volume2, Copy, Sparkles } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Volume2, Copy, Check, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -23,18 +23,20 @@ interface Props {
   targetLanguage: TargetLanguage;
 }
 
-async function copy(text: string, labels: ReturnType<typeof getPopupCopy>) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(labels.copied);
-  } catch {
-    toast.error(labels.copyFailed);
-  }
-}
-
 export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLanguage }: Props) {
-  const partOfSpeech = getPartOfSpeechLabels(entry).join(" · ");
+  const partOfSpeech = getPartOfSpeechLabels(entry, targetLanguage).join(" · ");
   const labels = getPopupCopy(targetLanguage);
+  const [copied, setCopied] = useState(false);
+
+  async function copyWord() {
+    try {
+      await navigator.clipboard.writeText(entry.word);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1600);
+    } catch {
+      toast.error(labels.copyFailed);
+    }
+  }
   const pointerPlaybackAt = useRef(0);
   const lastPointerPlayback = useRef<{ key: string; at: number } | null>(null);
   const audioUkButtonRef = useRef<HTMLButtonElement>(null);
@@ -103,9 +105,9 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
   }, [audioUk, audioUs, entry.word]);
 
   return (
-    <div className="flex items-start justify-between gap-2 px-4 pt-4 pb-2">
+    <div className="space-y-1 px-4 pt-4 pb-2">
       <div className="min-w-0 flex-1 space-y-1">
-        <div className="flex items-baseline gap-2">
+        <div className="flex items-baseline gap-2 pr-8">
           <h2 className="truncate text-xl font-semibold tracking-tight">{entry.word}</h2>
           {partOfSpeech && (
             <span className="text-xs italic text-muted-foreground">{partOfSpeech}</span>
@@ -113,16 +115,6 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
           {entry.source === "ai" && (
             <Badge variant="accent" className="ml-1 px-1.5 py-0 text-[10px]">
               AI
-            </Badge>
-          )}
-          {entry.source === "cache" && (
-            <Badge variant="outline" className="ml-1 px-1.5 py-0 text-[10px]">
-              Cache
-            </Badge>
-          )}
-          {entry.source === "free-dictionary-api" && (
-            <Badge variant="outline" className="ml-1 px-1.5 py-0 text-[10px]">
-              FreeDictionaryAPI
             </Badge>
           )}
         </div>
@@ -157,9 +149,16 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
             </>
           )}
         </div>
+
+        {entry.wordForms && entry.wordForms.length > 0 && (
+          <p className="text-xs text-muted-foreground">
+            <span className="font-medium">{labels.wordFormsLabel}</span>
+            <span className="font-mono">{entry.wordForms.join(" · ")}</span>
+          </p>
+        )}
       </div>
 
-      <div className="flex shrink-0 items-center gap-1">
+      <div className="flex flex-wrap items-center justify-end gap-1">
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -167,9 +166,9 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
               size="icon"
               className="h-8 w-8"
               aria-label={labels.copyWord}
-              onClick={() => copy(entry.word, labels)}
+              onClick={() => void copyWord()}
             >
-              <Copy className="h-4 w-4" />
+              {copied ? <Check className="h-4 w-4 text-emerald-600" aria-hidden="true" /> : <Copy className="h-4 w-4" aria-hidden="true" />}
             </Button>
           </TooltipTrigger>
           <TooltipContent>{labels.copyWord}</TooltipContent>

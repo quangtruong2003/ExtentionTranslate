@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ChevronDown, Loader2, Sparkles } from "lucide-react";
+import { ChevronDown, Loader2, Sparkles, Square } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { TargetLanguage } from "@/shared/types";
 import { MarkdownContent } from "./MarkdownContent";
@@ -11,6 +12,7 @@ interface Props {
   loading: boolean;
   requested: boolean;
   onRetry?: () => void;
+  onStop?: () => void;
   streamText?: string;
   thinkingText?: string;
   thinkingEnabled: boolean;
@@ -22,6 +24,7 @@ export function AISection({
   loading,
   requested,
   onRetry,
+  onStop,
   streamText = "",
   thinkingText = "",
   thinkingEnabled,
@@ -43,6 +46,25 @@ export function AISection({
   return (
     <div className="min-w-0 max-w-full border-t bg-muted/30">
       <div className="max-h-[min(560px,calc(100vh-180px))] min-w-0 max-w-full overflow-y-auto overflow-x-hidden px-4 py-3">
+        {loading && onStop && (
+          <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
+            <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-primary">
+              <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
+              <span className="truncate">{labels.generatingResponse}</span>
+            </span>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="h-7 shrink-0 gap-1.5 px-2 text-xs"
+              onClick={onStop}
+            >
+              <Square className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+              {labels.stopGeneration}
+            </Button>
+          </div>
+        )}
+
         {showThinking && (
           <Collapsible open={thinkingOpen} onOpenChange={setThinkingOpen} className="mb-3 min-w-0 rounded-lg border bg-background/70">
             <CollapsibleTrigger asChild>
@@ -70,10 +92,12 @@ export function AISection({
 
         {loading && !streamText && !showThinking && (
           <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs font-medium text-primary">
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-              <span>{labels.generatingResponse}</span>
-            </div>
+            {!onStop && (
+              <div className="flex items-center gap-2 text-xs font-medium text-primary">
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                <span>{labels.generatingResponse}</span>
+              </div>
+            )}
             <div className="space-y-2">
               <Skeleton className="h-3 w-full" />
               <Skeleton className="h-3 w-5/6" />

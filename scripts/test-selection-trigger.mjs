@@ -97,12 +97,13 @@ assert.match(contentSource, /onPointerDown=\{[\s\S]*?preventDefault\(\)/, "trigg
 assert.match(contentSource, /chrome\.runtime\.getURL\(\s*["']icons\/icon48\.png["']\s*\)/, "trigger uses the project icon asset");
 assert.match(contentSource, /<img\b[\s\S]*?iconUrl|<img\b[\s\S]*?src=\{[^}]*icon/i, "trigger renders the project icon as an image");
 assert.match(contentSource, /className=["'][^"']*\bh-9\s+w-9\b[^"']*["']/, "trigger keeps the 36x36 hit area");
-assert.match(contentSource, /focus-visible:rounded-md[\s\S]*?focus-visible:outline(?:-|\s)/, "trigger keeps a visible non-circular keyboard focus state");
+assert.match(contentSource, /className=["'][^"']*\brounded-lg\b[^"']*["']/, "trigger uses a rounded-square (non-circular) pill");
+assert.match(contentSource, /focus-visible:outline(?:-|\s)/, "trigger keeps a visible keyboard focus state");
 assert.doesNotMatch(contentSource, /import\s*\{\s*BookOpen\s*\}\s*from\s*["']lucide-react["']/, "trigger no longer uses the Lucide BookOpen icon");
-assert.doesNotMatch(
+assert.match(
   contentSource,
-  /className=["'][^"']*\brounded-full\b[^"']*\bborder\b[^"']*\bbg-background\b[^"']*\bshadow-lg\b[^"']*["']/,
-  "trigger has no circular border, background, or shadow chrome",
+  /className=["'][^"']*\bborder\b[^"']*\bshadow-md\b[^"']*["']/,
+  "trigger sits on a bordered, shadowed pill so it survives any page background",
 );
 
 const iconBranch = findModeBranch(selectionFlow, "icon");

@@ -1,6 +1,8 @@
 import { useRef } from "react";
+import { X } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
 import { DictionaryHeader } from "./DictionaryHeader";
 import { MeaningSection } from "./MeaningSection";
 import { DictionarySkeleton } from "./DictionarySkeleton";
@@ -38,6 +40,10 @@ interface Props {
   onAskAI: () => void;
   onTabChange: (tab: PopupTab) => void;
   onRetryLookup: () => void;
+  onClose: () => void;
+  onOpenSettings: () => void;
+  onLookupWord?: (word: string) => void;
+  onStop?: () => void;
 }
 
 export function DictionaryPopup(props: Props) {
@@ -57,20 +63,60 @@ export function DictionaryPopup(props: Props) {
     onAskAI,
     onTabChange,
     onRetryLookup,
+    onClose,
+    onOpenSettings,
+    onLookupWord,
+    onStop,
   } = props;
   const labels = getPopupCopy(targetLanguage);
   const rootRef = useRef<HTMLDivElement>(null);
   const isTranslationPhase = phase.kind === "translation-loading" || phase.kind === "translation-ready" || phase.kind === "translation-error";
+
+  function handleTabTrap(event: React.KeyboardEvent<HTMLDivElement>) {
+    if (event.key !== "Tab") return;
+    const dialog = rootRef.current;
+    if (!dialog) return;
+    const focusable = Array.from(
+      dialog.querySelectorAll<HTMLElement>(
+        "button:not([disabled]), [href], input:not([disabled]), textarea:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex='-1'])",
+      ),
+    ).filter((el) => el.offsetWidth > 0 || el.offsetHeight > 0);
+    if (focusable.length === 0) return;
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+    const active = dialog.ownerDocument.activeElement as HTMLElement | null;
+    const activeInDialog = active && dialog.contains(active) ? active : null;
+    if (event.shiftKey && (activeInDialog === first || !activeInDialog)) {
+      event.preventDefault();
+      last.focus({ preventScroll: true });
+    } else if (!event.shiftKey && (activeInDialog === last || !activeInDialog)) {
+      event.preventDefault();
+      first.focus({ preventScroll: true });
+    }
+  }
 
   return (
     <TooltipProvider delayDuration={250} skipDelayDuration={100}>
       <div
         ref={rootRef}
         tabIndex={-1}
-        className="flex min-w-0 max-h-[min(680px,calc(100vh-24px))] w-full max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl animate-fade-in"
+        className="relative flex max-h-[min(680px,calc(100vh-24px))] w-fit min-w-[340px] max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl animate-fade-in"
         role="dialog"
+        aria-modal="true"
+        onKeyDown={handleTabTrap}
         aria-label={isTranslationPhase ? labels.translationDialogLabel(word) : labels.dialogLabel(word)}
       >
+        <Button
+          type="button"
+          variant="ghost"
+          size="icon"
+          onClick={onClose}
+          aria-label={labels.close}
+          className="absolute right-1.5 top-1.5 z-10 h-7 w-7 text-muted-foreground hover:text-foreground"
+        >
+          <X className="h-4 w-4" aria-hidden="true" />
+        </Button>
+
       {phase.kind === "ready" && (
         <>
           <DictionaryHeader
@@ -103,7 +149,7 @@ export function DictionaryPopup(props: Props) {
             <>
               <div className="flex items-center justify-between gap-2 px-4 pt-4 pb-1">
                 <div className="space-y-1">
-                  <div className="text-lg font-semibold tracking-tight">{word}</div>
+                  <div className="text-xl font-semibold tracking-tight">{word}</div>
                   <div className="h-3 w-20 animate-pulse rounded bg-muted" />
                 </div>
               </div>
@@ -130,7 +176,7 @@ export function DictionaryPopup(props: Props) {
               )}
               <div>
                 {phase.entry.meanings.map((m, i) => (
-                  <MeaningSection key={i} meaning={m} word={phase.entry.word} targetLanguage={targetLanguage} />
+                  <MeaningSection key={i} meaning={m} word={phase.entry.word} targetLanguage={targetLanguage} onLookupWord={onLookupWord} />
                 ))}
               </div>
             </ScrollArea>
@@ -139,7 +185,7 @@ export function DictionaryPopup(props: Props) {
           {phase.kind === "error" && (
             <>
               <div className="px-4 pt-4 pb-2">
-                <div className="text-lg font-semibold tracking-tight">{word}</div>
+                <div className="text-xl font-semibold tracking-tight">{word}</div>
               </div>
               <ErrorState code={phase.code} onRetry={onRetryLookup} targetLanguage={targetLanguage} />
             </>
@@ -148,9 +194,9 @@ export function DictionaryPopup(props: Props) {
           {phase.kind === "empty" && (
             <>
               <div className="px-4 pt-4 pb-2">
-                <div className="text-lg font-semibold tracking-tight">{word}</div>
+                <div className="text-xl font-semibold tracking-tight">{word}</div>
               </div>
-              <EmptyState onAskAI={onAskAI} aiLoading={aiLoading} hasApiKey={hasApiKey} targetLanguage={targetLanguage} />
+              <EmptyState onAskAI={onAskAI} onOpenSettings={onOpenSettings} aiLoading={aiLoading} hasApiKey={hasApiKey} targetLanguage={targetLanguage} />
             </>
           )}
 
@@ -178,6 +224,7 @@ export function DictionaryPopup(props: Props) {
             thinkingEnabled={aiThinkingEnabled}
             error={aiError}
             onRetry={onAskAI}
+            onStop={onStop}
             targetLanguage={targetLanguage}
           />
         </div>

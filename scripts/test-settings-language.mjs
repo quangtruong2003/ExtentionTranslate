@@ -29,7 +29,7 @@ const [popupSource, openRouterSource] = await Promise.all([
 
 assert.match(popupSource, /Ngôn ngữ hiển thị/);
 assert.match(popupSource, /tab Từ điển/);
-assert.match(openRouterSource, /chỉ tuân theo System Prompt/);
+assert.match(openRouterSource, /điều khiển ngôn ngữ và cách trả lời của tab AI/);
 assert.doesNotMatch(openRouterSource, /Ngôn ngữ ưu tiên khi AI giải thích/);
 
 console.log("PASS: settings exposes English, Vietnamese, and Simplified Chinese for the Dictionary tab.");

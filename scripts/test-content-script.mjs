@@ -438,14 +438,16 @@ async function main() {
       renderedDialog,
       (node) => node.nodeName === "BUTTON" && /^(Close|Đóng|关闭)$/.test(getDomAttribute(node, "aria-label").trim()),
     );
-    for (const closeButton of closeButtonsInDialog) {
-      const closeButtonBox = await command("DOM.getBoxModel", { nodeId: closeButton.nodeId });
-      if (closeButtonBox.result?.model) {
-        throw new Error(`Popup dialog rendered a visible close button: ${getDomAttribute(closeButton, "aria-label")}`);
-      }
+    if (closeButtonsInDialog.length === 0) {
+      throw new Error("Popup dialog is missing its visible close button.");
     }
-    if (!finalPopupText.includes("Từ điển") || !finalPopupText.includes("OpenRouter")) {
-      throw new Error("Popup did not render the Dictionary and OpenRouter tabs.");
+    const firstCloseButton = closeButtonsInDialog[0];
+    const closeButtonBox = await command("DOM.getBoxModel", { nodeId: firstCloseButton.nodeId });
+    if (!closeButtonBox.result?.model) {
+      throw new Error("Popup close button exists but is not visible.");
+    }
+    if (!finalPopupText.includes("Từ điển") || !finalPopupText.includes("AI")) {
+      throw new Error("Popup did not render the Dictionary and AI tabs.");
     }
     let preloadedPronunciations = 0;
     for (let attempt = 0; attempt < 32; attempt += 1) {
@@ -895,7 +897,13 @@ async function main() {
       ]);
     }
     pageServer.close();
-    rmSync(profilePath, { recursive: true, force: true });
+    try {
+      rmSync(profilePath, { recursive: true, force: true });
+    } catch (error) {
+      // Windows keeps profile locks briefly after the browser exits; never let
+      // cleanup mask the real test result.
+      console.warn(`WARN: could not remove temp profile: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }
 

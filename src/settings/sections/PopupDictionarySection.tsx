@@ -1,9 +1,28 @@
 import { Languages, MousePointer2, Sparkles } from "lucide-react";
+import { DictionaryPopup } from "@/components/dictionary/DictionaryPopup";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { SUPPORTED_TARGET_LANGUAGES, type ExtensionSettings, type SelectionTriggerMode } from "@/shared/types";
+import { SUPPORTED_TARGET_LANGUAGES, type DictionaryEntry, type ExtensionSettings, type SelectionTriggerMode } from "@/shared/types";
+
+const PREVIEW_ENTRY: DictionaryEntry = {
+  word: "beautiful",
+  phonetics: { uk: "/ˈbjuːtɪfl/", us: "/ˈbjuːtɪfl/" },
+  wordForms: ["beautiful", "more beautiful", "most beautiful"],
+  meanings: [
+    {
+      partOfSpeech: "adjective",
+      cefr: "A2",
+      definition: "Having qualities that delight the senses or please the mind.",
+      translation: "đẹp, xinh đẹp",
+      examples: ["The garden looks beautiful in spring.", "She has a beautiful voice."],
+      phrases: [{ phrase: "beautiful day" }],
+      synonyms: ["lovely", "pretty", "gorgeous"],
+    },
+  ],
+  source: "free-api",
+};
 
 interface PopupDictionarySectionProps {
   settings: ExtensionSettings;
@@ -12,7 +31,7 @@ interface PopupDictionarySectionProps {
 
 export function PopupDictionarySection({ settings, onSettingsChange }: PopupDictionarySectionProps) {
   return (
-    <section aria-labelledby="popup-section-title" className="w-full min-w-0 max-w-full">
+    <section aria-labelledby="popup-section-title" className="w-full min-w-0 max-w-full space-y-6">
       <Card className="min-w-0 max-w-full">
         <CardHeader>
           <CardTitle id="popup-section-title">Popup & Từ điển</CardTitle>
@@ -93,6 +112,32 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
               id="auto-ask-ai"
               checked={settings.autoAskAIOnPopup}
               onCheckedChange={(autoAskAIOnPopup) => onSettingsChange({ ...settings, autoAskAIOnPopup })}
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="min-w-0 max-w-full">
+        <CardHeader>
+          <CardTitle>Xem trước popup</CardTitle>
+          <CardDescription>Bản xem trước hiển thị theo ngôn ngữ bạn chọn ở trên.</CardDescription>
+        </CardHeader>
+        <CardContent className="min-w-0">
+          <div className="w-fit min-w-[340px] max-w-full overflow-x-auto">
+            <DictionaryPopup
+              word={PREVIEW_ENTRY.word}
+              phase={{ kind: "ready", entry: PREVIEW_ENTRY }}
+              aiLoading={false}
+              aiRequested={false}
+              aiThinkingEnabled={false}
+              hasApiKey={false}
+              activeTab="dictionary"
+              targetLanguage={settings.targetLanguage}
+              onAskAI={() => {}}
+              onOpenSettings={() => {}}
+              onTabChange={() => {}}
+              onRetryLookup={() => {}}
+              onClose={() => {}}
             />
           </div>
         </CardContent>

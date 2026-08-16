@@ -59,6 +59,7 @@ export function App() {
   const [systemPrompt, setSystemPrompt] = useState(DEFAULT_SETTINGS.systemPrompt);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [loaded, setLoaded] = useState(false);
+  const [baseline, setBaseline] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("overview");
 
   useEffect(() => {
@@ -70,31 +71,52 @@ export function App() {
         setApiKey(next.openRouterApiKey);
         setModel(next.openRouterModel);
         setSystemPrompt(next.systemPrompt);
+        setBaseline(next);
       } catch {
         setSettings(DEFAULT_SETTINGS);
         setApiKey(DEFAULT_SETTINGS.openRouterApiKey);
         setModel(DEFAULT_SETTINGS.openRouterModel);
         setSystemPrompt(DEFAULT_SETTINGS.systemPrompt);
+        setBaseline(DEFAULT_SETTINGS);
       } finally {
         setLoaded(true);
       }
     })();
   }, []);
 
+  function composeNext(): ExtensionSettings {
+    return {
+      selectionTriggerMode: settings.selectionTriggerMode,
+      autoAskAIOnPopup: settings.autoAskAIOnPopup,
+      targetLanguage: settings.targetLanguage,
+      openRouterApiKey: apiKey.trim(),
+      openRouterModel: model.trim() || DEFAULT_SETTINGS.openRouterModel,
+      openRouterThinkingEnabled: settings.openRouterThinkingEnabled,
+      systemPrompt: systemPrompt,
+    };
+  }
+
+  const isDirty = loaded && (() => {
+    const next = composeNext();
+    return (Object.keys(next) as Array<keyof ExtensionSettings>).some((key) => next[key] !== baseline[key]);
+  })();
+
+  useEffect(() => {
+    if (!isDirty) return;
+    const handler = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+    };
+    window.addEventListener("beforeunload", handler);
+    return () => window.removeEventListener("beforeunload", handler);
+  }, [isDirty]);
+
   async function handleSave() {
     setSaveState("saving");
     try {
-      const next: ExtensionSettings = {
-        selectionTriggerMode: settings.selectionTriggerMode,
-        autoAskAIOnPopup: settings.autoAskAIOnPopup,
-        targetLanguage: settings.targetLanguage,
-        openRouterApiKey: apiKey.trim(),
-        openRouterModel: model.trim() || DEFAULT_SETTINGS.openRouterModel,
-        openRouterThinkingEnabled: settings.openRouterThinkingEnabled,
-        systemPrompt: systemPrompt,
-      };
+      const next = composeNext();
       await sendMessage("SAVE_SETTINGS", next);
       setSettings(next);
+      setBaseline(next);
       setSaveState("saved");
       toast.success("Đã lưu cài đặt");
       setTimeout(() => setSaveState("idle"), 1800);
@@ -139,10 +161,10 @@ export function App() {
                 )}
                 <Button
                   onClick={handleSave}
-                  disabled={saveState === "saving"}
+                  disabled={saveState === "saving" || !isDirty}
                   size="icon"
                   aria-label={saveState === "saving" ? "Đang lưu cài đặt" : "Lưu cài đặt"}
-                  className="shrink-0 sm:w-auto sm:px-4"
+                  className="shrink-0 disabled:opacity-50 sm:w-auto sm:px-4"
                 >
                   <Save className="h-4 w-4" aria-hidden="true" />
                   <span className="sr-only sm:not-sr-only">{saveState === "saving" ? "Đang lưu…" : "Lưu"}</span>

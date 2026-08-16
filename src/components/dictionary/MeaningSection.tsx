@@ -2,11 +2,13 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import type { DictionaryMeaning, TargetLanguage } from "@/shared/types";
 import { getPopupCopy } from "./copy";
+import { localizePartOfSpeech } from "./partOfSpeech";
 
 interface Props {
   meaning: DictionaryMeaning;
   word: string;
   targetLanguage: TargetLanguage;
+  onLookupWord?: (word: string) => void;
 }
 
 function highlightWordInternal(text: string, word: string): React.ReactNode {
@@ -26,13 +28,15 @@ function highlightWordInternal(text: string, word: string): React.ReactNode {
 
 export const highlight = highlightWordInternal;
 
-export function MeaningSection({ meaning, word, targetLanguage }: Props) {
+export function MeaningSection({ meaning, word, targetLanguage, onLookupWord }: Props) {
   const copy = getPopupCopy(targetLanguage);
   return (
     <div className="space-y-2 px-4 py-2">
       <div className="flex flex-wrap items-center gap-2">
         {meaning.partOfSpeech && (
-          <span className="text-xs font-semibold uppercase tracking-wide text-primary">{meaning.partOfSpeech}</span>
+          <span className="text-xs font-semibold uppercase tracking-wide text-primary">
+            {localizePartOfSpeech(meaning.partOfSpeech, targetLanguage)}
+          </span>
         )}
         {meaning.cefr && (
           <Badge variant="secondary" className="px-1.5 py-0 text-[10px]">
@@ -69,9 +73,17 @@ export function MeaningSection({ meaning, word, targetLanguage }: Props) {
           <p className="mb-1 text-xs font-medium text-muted-foreground">{copy.relatedPhrases}</p>
           <div className="flex flex-wrap gap-1.5">
             {meaning.phrases.map((p, i) => (
-              <Badge key={i} variant="outline" className="text-xs font-normal">
-                {p.phrase}
-              </Badge>
+              <button
+                key={i}
+                type="button"
+                onClick={() => onLookupWord?.(p.phrase)}
+                aria-label={copy.lookupWord(p.phrase)}
+                disabled={!onLookupWord}
+                title={onLookupWord ? copy.lookupWord(p.phrase) : undefined}
+                className="rounded-full transition-colors hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default"
+              >
+                <Badge variant="outline" className="text-xs font-normal">{p.phrase}</Badge>
+              </button>
             ))}
           </div>
         </div>
@@ -82,9 +94,17 @@ export function MeaningSection({ meaning, word, targetLanguage }: Props) {
           <p className="mb-1 text-xs font-medium text-muted-foreground">{copy.synonyms}</p>
           <div className="flex flex-wrap gap-1.5">
             {meaning.synonyms.map((s, i) => (
-              <Badge key={i} variant="secondary" className="text-xs font-normal">
-                {s}
-              </Badge>
+              <button
+                key={i}
+                type="button"
+                onClick={() => onLookupWord?.(s)}
+                aria-label={copy.lookupWord(s)}
+                disabled={!onLookupWord}
+                title={onLookupWord ? copy.lookupWord(s) : undefined}
+                className="rounded-full transition-colors hover:bg-accent focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary disabled:cursor-default"
+              >
+                <Badge variant="secondary" className="text-xs font-normal">{s}</Badge>
+              </button>
             ))}
           </div>
         </div>

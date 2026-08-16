@@ -17,6 +17,10 @@ export interface PopupCopy {
   askAI: string;
   askAILoading: string;
   askAITooltip: string;
+  openSettings: string;
+  stopGeneration: string;
+  wordFormsLabel: string;
+  lookupWord: (word: string) => string;
   close: string;
   closeTooltip: string;
   meaning: string;
@@ -93,7 +97,11 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
   en: {
     dictionaryTab: "Dictionary",
     translationTab: "Translation",
-    aiTab: "OpenRouter",
+    aiTab: "AI",
+    openSettings: "Open Settings",
+    stopGeneration: "Stop",
+    wordFormsLabel: "Word forms: ",
+    lookupWord: (word) => `Look up ${word}`,
     tabListLabel: "Explanation source",
     dialogLabel: (word) => `Dictionary lookup for ${word}`,
     translationDialogLabel: (sourceText) => `Translation for ${sourceText}`,
@@ -138,7 +146,11 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
   vi: {
     dictionaryTab: "Từ điển",
     translationTab: "Bản dịch",
-    aiTab: "OpenRouter",
+    aiTab: "AI",
+    openSettings: "Mở Cài đặt",
+    stopGeneration: "Dừng",
+    wordFormsLabel: "Các dạng từ: ",
+    lookupWord: (word) => `Tra từ ${word}`,
     tabListLabel: "Nguồn giải thích",
     dialogLabel: (word) => `Tra từ ${word}`,
     translationDialogLabel: (sourceText) => `Bản dịch cho ${sourceText}`,
@@ -183,7 +195,11 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
   "zh-CN": {
     dictionaryTab: "词典",
     translationTab: "翻译",
-    aiTab: "OpenRouter",
+    aiTab: "AI",
+    openSettings: "打开设置",
+    stopGeneration: "停止",
+    wordFormsLabel: "词形：",
+    lookupWord: (word) => `查询 ${word}`,
     tabListLabel: "解释来源",
     dialogLabel: (word) => `查询 ${word}`,
     translationDialogLabel: (sourceText) => `翻译 ${sourceText}`,

@@ -1,4 +1,5 @@
-import { Copy, RefreshCcw, Sparkles } from "lucide-react";
+import { useState } from "react";
+import { Check, Copy, RefreshCcw, Sparkles } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,20 +21,23 @@ interface Props {
   onAskAI: () => void;
 }
 
-async function copyText(text: string, labels: ReturnType<typeof getPopupCopy>) {
-  try {
-    await navigator.clipboard.writeText(text);
-    toast.success(labels.copied);
-  } catch {
-    toast.error(labels.copyFailed);
-  }
-}
-
 export function TextTranslationPanel({ phase, targetLanguage, hasApiKey, onRetry, onAskAI }: Props) {
   const labels = getPopupCopy(targetLanguage);
+  const [copiedTranslation, setCopiedTranslation] = useState(false);
+  const [copiedOriginal, setCopiedOriginal] = useState(false);
   const errorText = phase.kind === "translation-error" && phase.code === "TRANSLATOR_UNAVAILABLE"
     ? labels.translatorUnavailable
     : labels.translationFailed;
+
+  async function copyToClipboard(text: string, markCopied: (value: boolean) => void) {
+    try {
+      await navigator.clipboard.writeText(text);
+      markCopied(true);
+      window.setTimeout(() => markCopied(false), 1600);
+    } catch {
+      toast.error(labels.copyFailed);
+    }
+  }
 
   return (
     <div className="min-w-0 max-w-full space-y-3 overflow-hidden p-4">
@@ -54,9 +58,9 @@ export function TextTranslationPanel({ phase, targetLanguage, hasApiKey, onRetry
               size="icon"
               className="h-7 w-7 shrink-0"
               aria-label={labels.copyTranslation}
-              onClick={() => void copyText(phase.translatedText, labels)}
+              onClick={() => void copyToClipboard(phase.translatedText, setCopiedTranslation)}
             >
-              <Copy className="h-3.5 w-3.5" />
+              {copiedTranslation ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
             </Button>
           </div>
           <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-6">{phase.translatedText}</p>
@@ -93,9 +97,9 @@ export function TextTranslationPanel({ phase, targetLanguage, hasApiKey, onRetry
             size="icon"
             className="h-7 w-7 shrink-0"
             aria-label={labels.copyOriginal}
-            onClick={() => void copyText(phase.sourceText, labels)}
+            onClick={() => void copyToClipboard(phase.sourceText, setCopiedOriginal)}
           >
-            <Copy className="h-3.5 w-3.5" />
+            {copiedOriginal ? <Check className="h-3.5 w-3.5 text-emerald-600" aria-hidden="true" /> : <Copy className="h-3.5 w-3.5" aria-hidden="true" />}
           </Button>
         </div>
         <p className="min-w-0 whitespace-pre-wrap break-words text-sm leading-6 text-muted-foreground">

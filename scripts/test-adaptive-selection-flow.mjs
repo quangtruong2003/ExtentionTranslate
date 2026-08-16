@@ -48,12 +48,19 @@ assert.match(contentSource, /import \{[^}]*classifySelection[^}]*normalizeBrowse
 
 const openPopup = extractFunction(contentSource, "openPopup");
 const classificationIndex = openPopup.indexOf("classifySelection(info.text)");
-const dictionaryLookupIndex = openPopup.indexOf("MESSAGE_TYPES.DICTIONARY_LOOKUP");
+const runLookupIndex = openPopup.indexOf("runWordLookup(selectionMode.lookupText");
 assert.ok(classificationIndex >= 0, "openPopup classifies the selection");
-assert.ok(dictionaryLookupIndex >= 0, "openPopup still owns the dictionary lookup");
+assert.ok(runLookupIndex >= 0, "openPopup delegates the word lookup to the shared pipeline");
 assert.ok(
-  classificationIndex < dictionaryLookupIndex,
-  "openPopup classifies before sending DICTIONARY_LOOKUP",
+  classificationIndex < runLookupIndex,
+  "openPopup classifies before running the lookup",
+);
+
+const runWordLookup = extractFunction(contentSource, "runWordLookup");
+assert.ok(runWordLookup.indexOf("MESSAGE_TYPES.DICTIONARY_LOOKUP") >= 0, "runWordLookup owns the dictionary lookup");
+assert.ok(
+  runWordLookup.indexOf("selectionMode") === -1,
+  "runWordLookup stays selection-agnostic so chip lookups can reuse it",
 );
 
 assert.match(openPopup, /word:\s*selectionMode\.sourceText/);
@@ -69,13 +76,15 @@ assert.doesNotMatch(textBranch, /MESSAGE_TYPES\.DICTIONARY_LOOKUP/);
 assert.doesNotMatch(textBranch, /browserDictionaryTranslator\.warm/);
 
 const textBranchIndex = openPopup.indexOf('if (selectionMode.kind === "text")');
-const warmIndex = openPopup.indexOf("browserDictionaryTranslator.warm(settings.targetLanguage)");
-assert.ok(warmIndex > textBranchIndex, "dictionary warm only runs after text mode has returned");
-assert.match(openPopup.slice(warmIndex - 80, warmIndex + 80), /settings\.targetLanguage !== "en"/);
+const runLookupCallIndex = openPopup.indexOf("runWordLookup(selectionMode.lookupText");
+assert.ok(runLookupCallIndex > textBranchIndex, "word lookup only runs after text mode has returned");
+const warmIndex = runWordLookup.indexOf("browserDictionaryTranslator.warm(settings.targetLanguage)");
+assert.ok(warmIndex >= 0, "the shared pipeline warms the browser translator");
+assert.match(runWordLookup.slice(warmIndex - 80, warmIndex + 80), /settings\.targetLanguage !== "en"/);
 
-assert.match(openPopup, /MESSAGE_TYPES\.DICTIONARY_LOOKUP,[\s\S]*word:\s*selectionMode\.lookupText/);
-assert.match(openPopup, /language:\s*info\.pageLanguage/);
-assert.match(openPopup, /targetLanguage:\s*settings\.targetLanguage/);
+assert.match(runWordLookup, /MESSAGE_TYPES\.DICTIONARY_LOOKUP,[\s\S]*?word:\s*lookupText/);
+assert.match(runWordLookup, /language:\s*pageLanguage/);
+assert.match(runWordLookup, /targetLanguage:\s*settings\.targetLanguage/);
 
 const translateSelectedText = extractFunction(contentSource, "translateSelectedText");
 assert.match(translateSelectedText, /async function translateSelectedText\(info: SelectionInfo,\s*sourceText: string,\s*requestId: number\): Promise<void>/);

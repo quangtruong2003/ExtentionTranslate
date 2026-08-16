@@ -50,6 +50,9 @@ let popupPosition: Position | null = null;
 let outsideClickListener: ((ev: MouseEvent) => void) | null = null;
 let escListener: ((ev: KeyboardEvent) => void) | null = null;
 let resizeListener: (() => void) | null = null;
+// CDP device-metric overrides and some SPA viewport mutations change the
+// visual viewport without firing resize/visualViewport events; the poll below
+// is the only reliable re-anchor for them (see the zoom E2E contract).
 let viewportWatchTimer: number | null = null;
 let lastViewportKey = "";
 let debounceTimer: number | null = null;
@@ -133,6 +136,10 @@ function render() {
           state={state}
           onAskAI={() => void handleAskAI()}
           onRetryLookup={handleRetry}
+          onClose={closePopup}
+          onOpenSettings={openSettingsPage}
+          onLookupWord={handleLookupWord}
+          onStop={handleStopAI}
           onTabChange={(activeTab) => setState({ activeTab })}
         />
       ) : (
@@ -222,7 +229,7 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
           selectionTriggerPointerDown = false;
         }}
         onClick={onActivate}
-        className="inline-flex h-9 w-9 items-center justify-center border-0 bg-transparent p-0 opacity-90 outline-none transition-[transform,opacity] hover:scale-105 hover:opacity-100 focus-visible:rounded-md focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary active:scale-95"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-border bg-background/95 p-1 shadow-md backdrop-blur outline-none transition-[transform,box-shadow] hover:scale-105 hover:shadow-lg focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-1 focus-visible:outline-primary active:scale-95"
       >
         <img src={projectIconUrl} alt="" aria-hidden="true" draggable={false} className="h-6 w-6 object-contain" />
       </button>
@@ -230,10 +237,14 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
   );
 }
 
-function PopupContainer({ state, onAskAI, onRetryLookup, onTabChange }: {
+function PopupContainer({ state, onAskAI, onRetryLookup, onClose, onOpenSettings, onLookupWord, onStop, onTabChange }: {
   state: PopupState;
   onAskAI: () => void;
   onRetryLookup: () => void;
+  onClose: () => void;
+  onOpenSettings: () => void;
+  onLookupWord: (word: string) => void;
+  onStop: () => void;
   onTabChange: (tab: PopupTab) => void;
 }) {
   useLayoutEffect(() => {
@@ -275,9 +286,13 @@ function PopupContainer({ state, onAskAI, onRetryLookup, onTabChange }: {
           onAskAI={onAskAI}
           onTabChange={onTabChange}
           onRetryLookup={onRetryLookup}
+          onClose={onClose}
+          onOpenSettings={onOpenSettings}
+          onLookupWord={onLookupWord}
+          onStop={onStop}
         />
       </div>
-      <Toaster position="top-center" richColors closeButton />
+      <Toaster position="bottom-center" richColors closeButton />
     </>
   );
 }
@@ -295,8 +310,7 @@ function placePopup(rect: DOMRect) {
   const viewport = getPopupViewport();
   const maximumSize = constrainPopupSize({ width: 560, height: 680 }, viewport);
   if (popup) {
-    popup.style.width = `${maximumSize.width}px`;
-    popup.style.maxWidth = `${maximumSize.width}px`;
+    popup.style.maxWidth = "min(560px, calc(100vw - 24px))";
     popup.style.maxHeight = `${maximumSize.height}px`;
   }
   const measured = popup?.getBoundingClientRect();
@@ -397,6 +411,48 @@ function scheduleSelectionTriggerPlacement(info: SelectionInfo) {
   requestAnimationFrame(placeWhenMounted);
 }
 
+async function runWordLookup(lookupText: string, pageLanguage: string | undefined, myId: number): Promise<void> {
+  if (settings.targetLanguage !== "en") {
+    void browserDictionaryTranslator.warm(settings.targetLanguage);
+  }
+  try {
+    const res = await sendMessage<{ ok: boolean; payload: LookupResponse }>(MESSAGE_TYPES.DICTIONARY_LOOKUP, {
+      word: lookupText,
+      language: pageLanguage,
+      targetLanguage: settings.targetLanguage,
+    });
+    if (myId !== currentRequestId) return; // stale
+    if (!res?.ok) {
+      setPhase({ kind: "error", code: "INTERNAL" });
+      return;
+    }
+    if (res.payload.entry) {
+      sourceDictionaryEntry = res.payload.sourceEntry ?? res.payload.entry;
+      setState({
+        word: lookupText,
+        phase: { kind: "ready", entry: sourceDictionaryEntry },
+        translationStatus: "source",
+      });
+      if (settings.targetLanguage !== "en") {
+        void translateCurrentDictionaryEntry(sourceDictionaryEntry, myId, lookupText);
+      }
+      // re-place because content may grow
+      requestAnimationFrame(() => currentSelectionInfo && placePopup(getSelectionRect(currentSelectionInfo)));
+    } else if (settings.targetLanguage !== "en" && settings.hasOpenRouterApiKey) {
+      sourceDictionaryEntry = null;
+      setState({ word: lookupText, phase: { kind: "loading" }, translationStatus: "translating" });
+      void translateCurrentDictionaryEntry(null, myId, lookupText);
+    } else if (res.payload.error === "NO_RESULT") {
+      setPhase({ kind: "empty" });
+    } else {
+      setPhase({ kind: "error", code: res.payload.error || "INTERNAL" });
+    }
+  } catch {
+    if (myId !== currentRequestId) return;
+    setPhase({ kind: "error", code: "INTERNAL" });
+  }
+}
+
 async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   stopAIStream();
   stopDictionaryTranslation();
@@ -435,44 +491,7 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
     void translateSelectedText(info, selectionMode.sourceText, myId);
     return;
   }
-  if (settings.targetLanguage !== "en") {
-    void browserDictionaryTranslator.warm(settings.targetLanguage);
-  }
-  try {
-    const res = await sendMessage<{ ok: boolean; payload: LookupResponse }>(MESSAGE_TYPES.DICTIONARY_LOOKUP, {
-      word: selectionMode.lookupText,
-      language: info.pageLanguage,
-      targetLanguage: settings.targetLanguage,
-    });
-    if (myId !== currentRequestId) return; // stale
-    if (!res?.ok) {
-      setPhase({ kind: "error", code: "INTERNAL" });
-      return;
-    }
-    if (res.payload.entry) {
-      sourceDictionaryEntry = res.payload.sourceEntry ?? res.payload.entry;
-      setState({
-        phase: { kind: "ready", entry: sourceDictionaryEntry },
-        translationStatus: "source",
-      });
-      if (settings.targetLanguage !== "en") {
-        void translateCurrentDictionaryEntry(sourceDictionaryEntry, myId);
-      }
-      // re-place because content may grow
-      requestAnimationFrame(() => currentSelectionInfo && placePopup(getSelectionRect(currentSelectionInfo)));
-    } else if (settings.targetLanguage !== "en" && settings.hasOpenRouterApiKey) {
-      sourceDictionaryEntry = null;
-      setState({ phase: { kind: "loading" }, translationStatus: "translating" });
-      void translateCurrentDictionaryEntry(null, myId);
-    } else if (res.payload.error === "NO_RESULT") {
-      setPhase({ kind: "empty" });
-    } else {
-      setPhase({ kind: "error", code: res.payload.error || "INTERNAL" });
-    }
-  } catch {
-    if (myId !== currentRequestId) return;
-    setPhase({ kind: "error", code: "INTERNAL" });
-  }
+  await runWordLookup(selectionMode.lookupText, info.pageLanguage, myId);
 }
 
 async function translateSelectedText(info: SelectionInfo, sourceText: string, requestId: number): Promise<void> {
@@ -551,11 +570,11 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
   });
   const myId = currentRequestId;
   const req: AIRequest = {
-    word: currentSelectionInfo.text,
-    sentence: currentSelectionInfo.sentence,
-    contextBefore: currentSelectionInfo.contextBefore,
-    contextAfter: currentSelectionInfo.contextAfter,
-    pageLanguage: currentSelectionInfo.pageLanguage,
+    word: state.word,
+    sentence: currentSelectionInfo?.sentence,
+    contextBefore: currentSelectionInfo?.contextBefore,
+    contextAfter: currentSelectionInfo?.contextAfter,
+    pageLanguage: currentSelectionInfo?.pageLanguage,
   };
   try {
     const port = chrome.runtime.connect({ name: AI_STREAM_PORT_NAME });
@@ -600,7 +619,7 @@ function stopDictionaryTranslation() {
   }
 }
 
-async function translateCurrentDictionaryEntry(entry: DictionaryEntry | null, requestId: number) {
+async function translateCurrentDictionaryEntry(entry: DictionaryEntry | null, requestId: number, lookupWord: string) {
   stopDictionaryTranslation();
   const controller = new AbortController();
   translationController = controller;
@@ -611,7 +630,7 @@ async function translateCurrentDictionaryEntry(entry: DictionaryEntry | null, re
     if (!entry) {
       const response = await sendMessage<{ ok: boolean; payload?: DictionaryRemoteTranslationResponse; error?: string }>(
         MESSAGE_TYPES.DICTIONARY_TRANSLATE_REMOTE,
-        { word: currentSelectionInfo?.text ?? "", targetLanguage: settings.targetLanguage, requestId },
+        { word: lookupWord, targetLanguage: settings.targetLanguage, requestId },
       );
       if (requestId !== currentRequestId || controller.signal.aborted || !state) return;
       if (!response?.ok || !response.payload?.entry) {
@@ -674,6 +693,22 @@ function handleRetry() {
   void openPopup(currentSelectionInfo, false);
 }
 
+function handleLookupWord(text: string) {
+  if (!state) return;
+  const mode = classifySelection(text);
+  const lookupText = (mode.kind === "word" ? mode.lookupText : mode.sourceText).trim();
+  if (!lookupText || lookupText.toLowerCase() === state.word.toLowerCase()) return;
+  stopAIStream();
+  stopDictionaryTranslation();
+  const myId = ++currentRequestId;
+  void runWordLookup(lookupText, currentSelectionInfo?.pageLanguage, myId);
+}
+
+function openSettingsPage() {
+  closePopup();
+  void sendMessage(MESSAGE_TYPES.OPEN_SETTINGS, undefined);
+}
+
 function showSelectionTrigger(info: SelectionInfo) {
   stopAIStream();
   stopDictionaryTranslation();
@@ -727,6 +762,11 @@ function stopAIStream() {
   const port = aiPort;
   aiPort = null;
   port.disconnect();
+}
+
+function handleStopAI() {
+  stopAIStream();
+  if (state) setState({ aiLoading: false });
 }
 
 function addOutsideListeners() {

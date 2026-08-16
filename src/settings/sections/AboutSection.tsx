@@ -1,13 +1,24 @@
 import { ExternalLink, LockKeyhole, MonitorCheck } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
+function getExtensionVersion(): string {
+  try {
+    if (typeof chrome !== "undefined" && chrome.runtime?.getManifest) {
+      return chrome.runtime.getManifest().version;
+    }
+  } catch {
+    // Preview/test environments lack the extension runtime.
+  }
+  return "—";
+}
+
 export function AboutSection() {
   return (
     <section aria-labelledby="about-section-title" className="w-full min-w-0 max-w-full space-y-6">
       <Card className="min-w-0 max-w-full">
         <CardHeader>
           <CardTitle id="about-section-title">Giới thiệu</CardTitle>
-          <CardDescription>ExtentionTranslate phiên bản 1.0.</CardDescription>
+          <CardDescription>{`ExtentionTranslate phiên bản ${getExtensionVersion()}.`}</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4 break-words text-sm text-muted-foreground">
           <p>

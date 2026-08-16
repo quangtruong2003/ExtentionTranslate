@@ -47,8 +47,8 @@ export function ModelSelector({ value, onChange, apiKey }: ModelSelectorProps) {
   const [loading, setLoading] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
   const [customInput, setCustomInput] = React.useState("");
+  const [knownModels, setKnownModels] = React.useState<OpenRouterModel[]>([]);
   const inputRef = React.useRef<HTMLInputElement>(null);
-  const debounceRef = React.useRef<ReturnType<typeof setTimeout> | null>(null);
 
   async function loadModels() {
     if (!apiKey) {
@@ -98,8 +98,6 @@ export function ModelSelector({ value, onChange, apiKey }: ModelSelectorProps) {
 
   function handleQueryChange(val: string) {
     setQuery(val);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
-    debounceRef.current = setTimeout(() => setQuery(val), 350);
   }
 
   function handleSelect(modelId: string) {
@@ -128,6 +126,30 @@ export function ModelSelector({ value, onChange, apiKey }: ModelSelectorProps) {
     );
   }, [models, query]);
 
+  React.useEffect(() => {
+    if (!apiKey) return;
+    if (modelCache?.apiKey === apiKey) {
+      setKnownModels(modelCache.models);
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const res = await sendBgMessage<{ models: OpenRouterModel[] }>(MESSAGE_TYPES.GET_MODELS, { apiKey });
+      if (!cancelled && res?.models) {
+        modelCache = { models: res.models, fetchedAt: Date.now(), apiKey };
+        setKnownModels(res.models);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [apiKey]);
+
+  const selectedModel = React.useMemo(
+    () => knownModels.find((m) => m.id === value),
+    [knownModels, value],
+  );
+
   return (
     <PopoverPrimitive.Root open={open} onOpenChange={handleOpenChange}>
       <PopoverPrimitive.Trigger asChild>
@@ -137,8 +159,19 @@ export function ModelSelector({ value, onChange, apiKey }: ModelSelectorProps) {
           aria-expanded={open}
           className="w-full justify-between font-normal"
         >
-          <span className={cn("truncate", !value && "text-muted-foreground")}>
-            {value || "Chọn model…"}
+          <span className={cn("min-w-0 flex-1 text-left", !value && "text-muted-foreground")}>
+            {value ? (
+              selectedModel?.name && selectedModel.name !== value ? (
+                <>
+                  <span className="block truncate font-medium">{selectedModel.name}</span>
+                  <span className="block truncate text-xs font-normal text-muted-foreground">{value}</span>
+                </>
+              ) : (
+                <span className="block truncate">{value}</span>
+              )
+            ) : (
+              "Chọn model…"
+            )}
           </span>
           <ChevronDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>

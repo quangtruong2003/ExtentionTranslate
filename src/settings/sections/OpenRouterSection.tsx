@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { Eye, EyeOff, KeyRound, Sparkles, Trash2 } from "lucide-react";
 import { ModelSelector } from "@/components/ModelSelector";
 import { Button } from "@/components/ui/button";
@@ -7,6 +8,7 @@ import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+import { MESSAGE_TYPES } from "@/shared/constants";
 import type { ExtensionSettings } from "@/shared/types";
 
 interface OpenRouterSectionProps {
@@ -23,6 +25,8 @@ interface OpenRouterSectionProps {
   onResetSystemPrompt: () => void;
 }
 
+type KeyCheckState = "idle" | "checking" | "ok" | "error";
+
 export function OpenRouterSection({
   settings,
   onSettingsChange,
@@ -36,6 +40,38 @@ export function OpenRouterSection({
   onSystemPromptChange,
   onResetSystemPrompt,
 }: OpenRouterSectionProps) {
+  const [keyCheck, setKeyCheck] = useState<{ state: KeyCheckState; message?: string }>({ state: "idle" });
+
+  useEffect(() => {
+    setKeyCheck({ state: "idle" });
+  }, [apiKey]);
+
+  async function handleCheckKey() {
+    const trimmed = apiKey.trim();
+    if (!trimmed) return;
+    setKeyCheck({ state: "checking" });
+    try {
+      const response = await new Promise<{ ok?: boolean; payload?: { models?: unknown[] } }>((resolve) => {
+        try {
+          chrome.runtime.sendMessage(
+            { type: MESSAGE_TYPES.GET_MODELS, payload: { apiKey: trimmed } },
+            (reply) => resolve(reply as { ok?: boolean; payload?: { models?: unknown[] } }),
+          );
+        } catch {
+          resolve({});
+        }
+      });
+      const count = Array.isArray(response?.payload?.models) ? response.payload!.models!.length : 0;
+      if (response?.ok && count > 0) {
+        setKeyCheck({ state: "ok", message: `Key hợp lệ — ${count} model khả dụng.` });
+      } else {
+        setKeyCheck({ state: "error", message: "Key không hợp lệ hoặc không kết nối được OpenRouter." });
+      }
+    } catch {
+      setKeyCheck({ state: "error", message: "Không kiểm tra được key. Vui lòng thử lại." });
+    }
+  }
+
   return (
     <section aria-labelledby="openrouter-section-title" className="w-full min-w-0 max-w-full">
       <Card className="min-w-0 max-w-full">
@@ -77,7 +113,21 @@ export function OpenRouterSection({
                 </button>
               </div>
               <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onApiKeyChange("")} disabled={!apiKey}>Xóa key</Button>
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full sm:w-auto"
+                onClick={() => void handleCheckKey()}
+                disabled={!apiKey.trim() || keyCheck.state === "checking"}
+              >
+                {keyCheck.state === "checking" ? "Đang kiểm tra…" : "Kiểm tra key"}
+              </Button>
             </div>
+            {keyCheck.state !== "idle" && keyCheck.state !== "checking" && (
+              <p className={`text-xs ${keyCheck.state === "ok" ? "text-emerald-600" : "text-destructive"}`}>
+                {keyCheck.message}
+              </p>
+            )}
             <p className="text-xs text-muted-foreground">API key được lưu cục bộ trong trình duyệt và chỉ được dùng để gọi OpenRouter.</p>
           </div>
 
@@ -116,7 +166,9 @@ export function OpenRouterSection({
               rows={10}
               className="font-mono text-xs leading-relaxed"
             />
-            <p className="text-xs text-muted-foreground">Tab OpenRouter chỉ tuân theo System Prompt này; không tự lấy ngôn ngữ hiển thị của tab Từ điển.</p>
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              System Prompt điều khiển ngôn ngữ và cách trả lời của tab AI trong popup. Khi từ điển không có dữ liệu, prompt này cũng định dạng bản dịch JSON dùng cho tab Từ điển.
+            </p>
           </div>
         </CardContent>
       </Card>
