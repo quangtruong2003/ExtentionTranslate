@@ -16,7 +16,7 @@ export type MessageType = (typeof MESSAGE_TYPES)[keyof typeof MESSAGE_TYPES];
 
 export const AI_STREAM_PORT_NAME = "ai-explain-stream";
 
-export const MAX_SELECTION_LENGTH = 200;
+export const MAX_SELECTION_LENGTH = 2000;
 export const SELECTION_DEBOUNCE_MS = 220;
 export const POPUP_MAX_WIDTH = 560;
 export const POPUP_VIEWPORT_PADDING = 12;

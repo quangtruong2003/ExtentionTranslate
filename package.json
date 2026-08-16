@@ -25,6 +25,7 @@
     "test:settings-thinking": "node --experimental-strip-types scripts/test-settings-thinking.mjs",
     "test:auto-ask": "node --experimental-strip-types scripts/test-auto-ask.mjs",
     "test:selection-trigger": "node --experimental-strip-types scripts/test-selection-trigger.mjs",
+    "test:selection-mode": "node --experimental-strip-types scripts/test-selection-mode.mjs",
     "test:popup-layout": "node --experimental-strip-types scripts/test-popup-layout.mjs",
     "test:popup-copy": "node --experimental-strip-types scripts/test-popup-copy.mjs",
     "test:markdown": "node --experimental-strip-types scripts/test-markdown-rendering.mjs",
