@@ -1,3 +1,4 @@
+import type { BrowserSourceLanguage } from "@/content/selectionMode";
 import type { DictionaryEntry, DictionaryMeaning, DictionaryPhrase, TargetLanguage } from "@/shared/types";
 
 export type BrowserTranslatorAvailability = "unavailable" | "downloadable" | "downloading" | "available";
@@ -7,16 +8,19 @@ export interface BrowserTranslatorSession {
   destroy(): void;
 }
 
+export type BrowserLanguage = BrowserSourceLanguage;
+
 export interface BrowserTranslatorFactory {
-  availability(options: { sourceLanguage: "en"; targetLanguage: "vi" | "zh" }): Promise<BrowserTranslatorAvailability>;
+  availability(options: { sourceLanguage: BrowserLanguage; targetLanguage: BrowserLanguage }): Promise<BrowserTranslatorAvailability>;
   create(options: {
-    sourceLanguage: "en";
-    targetLanguage: "vi" | "zh";
+    sourceLanguage: BrowserLanguage;
+    targetLanguage: BrowserLanguage;
     monitor?: (monitor: EventTarget) => void;
   }): Promise<BrowserTranslatorSession>;
 }
 
 type BrowserTargetLanguage = "vi" | "zh";
+type BrowserSessionKey = `${BrowserLanguage}->${BrowserLanguage}`;
 
 function isAbortError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "name" in error && (error as { name?: string }).name === "AbortError";
@@ -26,7 +30,7 @@ function toTrimmedText(value: string): string {
   return value.trim();
 }
 
-async function translateText(
+async function translateNonEmptyText(
   session: BrowserTranslatorSession,
   value: string,
   signal?: AbortSignal,
@@ -49,7 +53,7 @@ async function translateOptionalText(
   signal?: AbortSignal,
 ): Promise<string | undefined> {
   if (!value?.trim()) return undefined;
-  return translateText(session, value, signal);
+  return translateNonEmptyText(session, value, signal);
 }
 
 async function translatePhrase(
@@ -57,7 +61,7 @@ async function translatePhrase(
   phrase: DictionaryPhrase,
   signal?: AbortSignal,
 ): Promise<DictionaryPhrase> {
-  const translatedPhrase = await translateText(session, phrase.phrase, signal);
+  const translatedPhrase = await translateNonEmptyText(session, phrase.phrase, signal);
   const translatedTranslation = await translateOptionalText(session, phrase.translation, signal);
   const translatedMeaning = await translateOptionalText(session, phrase.meaning, signal);
   return {
@@ -79,12 +83,12 @@ async function translateMeaning(
   const meaningTranslation = await translateOptionalText(session, meaning.translation, signal);
   if (meaningTranslation) translated.translation = meaningTranslation;
 
-  translated.definition = await translateText(session, meaning.definition, signal);
+  translated.definition = await translateNonEmptyText(session, meaning.definition, signal);
 
   if (meaning.examples?.length) {
     translated.examples = [];
     for (const example of meaning.examples) {
-      translated.examples.push(await translateText(session, example, signal));
+      translated.examples.push(await translateNonEmptyText(session, example, signal));
     }
   }
 
@@ -98,7 +102,7 @@ async function translateMeaning(
   if (meaning.synonyms?.length) {
     translated.synonyms = [];
     for (const synonym of meaning.synonyms) {
-      translated.synonyms.push(await translateText(session, synonym, signal));
+      translated.synonyms.push(await translateNonEmptyText(session, synonym, signal));
     }
   }
 
@@ -149,9 +153,9 @@ export function toBrowserTargetLanguage(targetLanguage: Exclude<TargetLanguage, 
 export class BrowserDictionaryTranslator {
   private readonly getFactory: () => BrowserTranslatorFactory | undefined;
 
-  private readonly sessionPromises = new Map<BrowserTargetLanguage, Promise<BrowserTranslatorSession | null>>();
+  private readonly sessionPromises = new Map<BrowserSessionKey, Promise<BrowserTranslatorSession | null>>();
 
-  private readonly sessions = new Map<BrowserTargetLanguage, BrowserTranslatorSession>();
+  private readonly sessions = new Map<BrowserSessionKey, BrowserTranslatorSession>();
 
   private destroyed = false;
 
@@ -165,7 +169,7 @@ export class BrowserDictionaryTranslator {
   }
 
   async warm(targetLanguage: Exclude<TargetLanguage, "en">): Promise<void> {
-    void (await this.getSession(targetLanguage));
+    void (await this.getSession("en", toBrowserTargetLanguage(targetLanguage)));
   }
 
   async translate(
@@ -174,17 +178,39 @@ export class BrowserDictionaryTranslator {
     signal?: AbortSignal,
   ): Promise<DictionaryEntry | null> {
     const browserTargetLanguage = toBrowserTargetLanguage(targetLanguage);
-    const session = await this.getSession(targetLanguage);
+    const session = await this.getSession("en", browserTargetLanguage);
     if (!session) return null;
 
     const translated = await translateDictionaryEntryWithSession(entry, targetLanguage, session, signal);
     if (translated) return translated;
 
     if (!signal?.aborted) {
-      this.dropSession(browserTargetLanguage, session);
+      this.dropSession("en", browserTargetLanguage, session);
     }
 
     return null;
+  }
+
+  async translateText(
+    input: string,
+    sourceLanguage: BrowserLanguage,
+    targetLanguage: BrowserLanguage,
+    signal?: AbortSignal,
+  ): Promise<string | null> {
+    const trimmed = toTrimmedText(input);
+    if (sourceLanguage === targetLanguage) return trimmed;
+
+    const session = await this.getSession(sourceLanguage, targetLanguage);
+    if (!session) return null;
+
+    try {
+      return await translateNonEmptyText(session, trimmed, signal);
+    } catch (error) {
+      if (!isAbortError(error) && !signal?.aborted) {
+        this.dropSession(sourceLanguage, targetLanguage, session);
+      }
+      return null;
+    }
   }
 
   async destroy(): Promise<void> {
@@ -202,9 +228,14 @@ export class BrowserDictionaryTranslator {
     }
   }
 
-  private dropSession(targetLanguage: BrowserTargetLanguage, session: BrowserTranslatorSession): void {
-    if (this.sessions.get(targetLanguage) !== session) return;
-    this.sessions.delete(targetLanguage);
+  private dropSession(
+    sourceLanguage: BrowserLanguage,
+    targetLanguage: BrowserLanguage,
+    session: BrowserTranslatorSession,
+  ): void {
+    const key = this.toSessionKey(sourceLanguage, targetLanguage);
+    if (this.sessions.get(key) !== session) return;
+    this.sessions.delete(key);
     try {
       session.destroy();
     } catch {
@@ -212,22 +243,20 @@ export class BrowserDictionaryTranslator {
     }
   }
 
-  private async getSession(
-    targetLanguage: Exclude<TargetLanguage, "en"> | BrowserTargetLanguage,
-  ): Promise<BrowserTranslatorSession | null> {
+  private async getSession(sourceLanguage: BrowserLanguage, targetLanguage: BrowserLanguage): Promise<BrowserTranslatorSession | null> {
     if (this.destroyed) return null;
 
-    const browserTargetLanguage = targetLanguage === "zh-CN" ? "zh" : targetLanguage;
-    const existingSession = this.sessions.get(browserTargetLanguage);
+    const key = this.toSessionKey(sourceLanguage, targetLanguage);
+    const existingSession = this.sessions.get(key);
     if (existingSession) return existingSession;
 
-    const existingPromise = this.sessionPromises.get(browserTargetLanguage);
+    const existingPromise = this.sessionPromises.get(key);
     if (existingPromise) return existingPromise;
 
-    const promise = this.createSession(browserTargetLanguage).finally(() => {
-      this.sessionPromises.delete(browserTargetLanguage);
+    const promise = this.createSession(sourceLanguage, targetLanguage).finally(() => {
+      this.sessionPromises.delete(key);
     });
-    this.sessionPromises.set(browserTargetLanguage, promise);
+    this.sessionPromises.set(key, promise);
 
     const session = await promise;
     if (!session) return null;
@@ -241,28 +270,35 @@ export class BrowserDictionaryTranslator {
       return null;
     }
 
-    this.sessions.set(browserTargetLanguage, session);
+    this.sessions.set(key, session);
     return session;
   }
 
-  private async createSession(browserTargetLanguage: BrowserTargetLanguage): Promise<BrowserTranslatorSession | null> {
+  private async createSession(
+    sourceLanguage: BrowserLanguage,
+    targetLanguage: BrowserLanguage,
+  ): Promise<BrowserTranslatorSession | null> {
     const factory = this.getFactory();
     if (!factory) return null;
 
     try {
       const availability = await factory.availability({
-        sourceLanguage: "en",
-        targetLanguage: browserTargetLanguage,
+        sourceLanguage,
+        targetLanguage,
       });
 
       if (availability === "unavailable") return null;
 
       return await factory.create({
-        sourceLanguage: "en",
-        targetLanguage: browserTargetLanguage,
+        sourceLanguage,
+        targetLanguage,
       });
     } catch {
       return null;
     }
+  }
+
+  private toSessionKey(sourceLanguage: BrowserLanguage, targetLanguage: BrowserLanguage): BrowserSessionKey {
+    return `${sourceLanguage}->${targetLanguage}`;
   }
 }
