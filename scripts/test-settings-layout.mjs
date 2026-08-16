@@ -74,7 +74,6 @@ assert.match(popupSource, /type="radio"/);
 assert.match(popupSource, /includeSelectionContext/);
 assert.match(popupSource, /id="ai-context"/);
 assert.match(popupSource, /Gửi ngữ cảnh xung quanh cho AI/);
-assert.match(popupSource, /popup-preview-theme/);
 assert.match(openRouterSource, /className="flex min-w-0 flex-col gap-2 sm:flex-row"/);
 assert.match(openRouterSource, /className="flex flex-wrap items-center justify-between gap-3"/);
 for (const importName of [

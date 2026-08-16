@@ -193,7 +193,7 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
           <CardDescription>Bản xem trước hiển thị theo ngôn ngữ bạn chọn ở trên.</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0">
-          <div className="popup-preview-theme w-fit min-w-[340px] max-w-full overflow-x-auto rounded-lg">
+          <div className="w-fit min-w-[340px] max-w-full overflow-x-auto rounded-lg">
             <DictionaryPopup
               word={PREVIEW_ENTRY.word}
               phase={{ kind: "ready", entry: PREVIEW_ENTRY }}

@@ -75,28 +75,4 @@
     background-color: hsl(var(--border));
     border-radius: 999px;
   }
-
-  /* Bản xem trước popup luôn dùng bảng màu indigo thật của popup,
-     độc lập với theme monochrome của trang cài đặt. */
-  .popup-preview-theme {
-    --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
-    --primary: 238.7 83% 66%;
-    --primary-foreground: 210 40% 98%;
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
-    --accent: 238.7 83% 96%;
-    --accent-foreground: 238.7 83% 30%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 238.7 83% 66%;
-  }
 }
