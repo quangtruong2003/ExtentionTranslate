@@ -54,7 +54,7 @@ assert.equal(normalizeSettings({ openRouterReasoningEffort: "high" }).openRouter
 assert.equal(normalizeSettings({ openRouterReasoningEffort: "invalid" }).openRouterReasoningEffort, "low");
 assert.equal(normalizeSettings({ openRouterMaxTokens: 4096 }).openRouterMaxTokens, 4096);
 assert.equal(normalizeSettings({ openRouterMaxTokens: 511 }).openRouterMaxTokens, 1600);
-assert.equal(normalizeSettings({ openRouterReasoningMaxTokens: 2048 }).openRouterReasoningMaxTokens, 2048);
+assert.equal(normalizeSettings({ openRouterReasoningMaxTokens: 2048, openRouterMaxTokens: 3200 }).openRouterReasoningMaxTokens, 2048);
 assert.equal(normalizeSettings({ openRouterReasoningMaxTokens: 1024, openRouterMaxTokens: 1024 }).openRouterReasoningMaxTokens, null);
 
 assert.equal(getOpenRouterSettingsValidationError({ ...DEFAULT_SETTINGS, openRouterMaxTokens: 511 }), "Max output tokens phải nằm trong khoảng 512–8192.");
