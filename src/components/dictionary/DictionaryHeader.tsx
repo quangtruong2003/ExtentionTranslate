@@ -13,6 +13,7 @@ import {
 } from "@/services/dictionary/pronunciation";
 import { registerShadowButtonAction } from "@/content/shadowRoot";
 import { getPopupCopy } from "./copy";
+import { getPartOfSpeechLabels } from "./partOfSpeech";
 
 interface Props {
   entry: DictionaryEntry;
@@ -32,7 +33,7 @@ async function copy(text: string, labels: ReturnType<typeof getPopupCopy>) {
 }
 
 export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLanguage }: Props) {
-  const primary = entry.meanings[0];
+  const partOfSpeech = getPartOfSpeechLabels(entry).join(" · ");
   const labels = getPopupCopy(targetLanguage);
   const pointerPlaybackAt = useRef(0);
   const lastPointerPlayback = useRef<{ key: string; at: number } | null>(null);
@@ -106,8 +107,8 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, targetLang
       <div className="min-w-0 flex-1 space-y-1">
         <div className="flex items-baseline gap-2">
           <h2 className="truncate text-xl font-semibold tracking-tight">{entry.word}</h2>
-          {primary?.partOfSpeech && (
-            <span className="text-xs italic text-muted-foreground">{primary.partOfSpeech}</span>
+          {partOfSpeech && (
+            <span className="text-xs italic text-muted-foreground">{partOfSpeech}</span>
           )}
           {entry.source === "ai" && (
             <Badge variant="accent" className="ml-1 px-1.5 py-0 text-[10px]">

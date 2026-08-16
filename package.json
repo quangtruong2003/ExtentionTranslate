@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build && vite build --config vite.content.config.ts && node scripts/generate-icons.mjs",
     "icons": "node scripts/generate-icons.mjs",
     "test:dictionary-presentation": "node --experimental-strip-types scripts/test-dictionary-presentation.mjs",
+    "test:part-of-speech": "node --experimental-strip-types scripts/test-part-of-speech.mjs",
     "test:dictionary-translation": "node --experimental-strip-types scripts/test-dictionary-translation.mjs",
     "test:browser-translator": "node --experimental-strip-types scripts/test-browser-translator.mjs",
     "test:dictionary-translation-cache": "node --experimental-strip-types scripts/test-dictionary-translation-cache.mjs",
