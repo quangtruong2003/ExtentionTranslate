@@ -49,6 +49,11 @@ const fixedReasoningBody = buildOpenRouterStreamBody("openai/o3-mini", promptMes
   maxTokens: 8192,
 });
 assert.deepEqual(fixedReasoningBody.reasoning, { effort: "high" });
+const fixedNoThinkingBody = buildOpenRouterStreamBody("openai/o3-mini", promptMessages, false, {
+  reasoningEffort: "high",
+  maxTokens: 8192,
+});
+assert.equal("reasoning" in fixedNoThinkingBody, false, "disabled thinking must omit reasoning config");
 
 const translationMessages = buildDictionaryTranslationMessages({ word: "run", meanings: [] }, "vi");
 assert.match(translationMessages[0].content, /Vietnamese/);

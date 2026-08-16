@@ -34,13 +34,13 @@ export function buildOpenRouterGenerationParameters(options: OpenRouterGeneratio
   const thinkingEnabled = options.thinkingEnabled ?? true;
   const reasoningMaxTokens = options.reasoningMaxTokens ?? null;
   const reasoning = !thinkingEnabled
-    ? { effort: "none" as const }
+    ? null
     : reasoningMaxTokens !== null
       ? { max_tokens: reasoningMaxTokens }
       : { effort: (options.reasoningEffort ?? "low") as OpenRouterReasoningEffort };
   return {
     max_tokens: options.maxTokens ?? AI_STREAM_MAX_TOKENS,
-    ...(supportsReasoningOptions(options.model) ? { reasoning } : {}),
+    ...(reasoning !== null && supportsReasoningOptions(options.model) ? { reasoning } : {}),
   };
 }
 

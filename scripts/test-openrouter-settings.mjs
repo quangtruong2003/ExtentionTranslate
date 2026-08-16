@@ -25,7 +25,7 @@ assert.equal(getOpenRouterSettingsValidationError(DEFAULT_SETTINGS), null);
 
 assert.deepEqual(
   buildOpenRouterGenerationParameters({ thinkingEnabled: false, maxTokens: 2400 }),
-  { max_tokens: 2400, reasoning: { effort: "none" } },
+  { max_tokens: 2400 },
 );
 assert.deepEqual(
   buildOpenRouterGenerationParameters({ thinkingEnabled: true, reasoningEffort: "high", maxTokens: 3200 }),
