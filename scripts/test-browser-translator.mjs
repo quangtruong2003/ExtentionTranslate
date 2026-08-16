@@ -175,6 +175,29 @@ assert.equal(
 );
 assert.deepEqual(formattedCalls, ["The sentence.", "A. between", "B. any"]);
 
+const placeholderTranslator = new BrowserDictionaryTranslator(() => ({
+  async availability() {
+    return "available";
+  },
+  async create() {
+    return {
+      async translate(input) {
+        return input.replace(/_{3,}/gu, "");
+      },
+      destroy() {},
+    };
+  },
+}));
+assert.equal(
+  await placeholderTranslator.translateText(
+    "Throughout the onboarding program, new hires develop _____ habits that streamline their daily tasks.",
+    "en",
+    "vi",
+  ),
+  "Throughout the onboarding program, new hires develop _____ habits that streamline their daily tasks.",
+  "browser text translation preserves blank placeholders",
+);
+
 let delayedResolve;
 let concurrentCreateCalls = 0;
 const concurrentTranslator = new BrowserDictionaryTranslator(() => ({

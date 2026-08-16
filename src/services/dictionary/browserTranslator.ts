@@ -21,6 +21,7 @@ export interface BrowserTranslatorFactory {
 
 type BrowserTargetLanguage = "vi" | "zh";
 type BrowserSessionKey = `${BrowserLanguage}->${BrowserLanguage}`;
+const TEXT_BLANK_PATTERN = /_{3,}/gu;
 
 function isAbortError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "name" in error && (error as { name?: string }).name === "AbortError";
@@ -45,6 +46,37 @@ async function translateNonEmptyText(
     throw new Error("browser translator returned an empty string");
   }
   return trimmed;
+}
+
+async function translateTextSegmentPreservingWhitespace(
+  session: BrowserTranslatorSession,
+  value: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  if (!value.trim()) return value;
+  const leadingWhitespace = value.match(/^\s*/u)?.[0] ?? "";
+  const trailingWhitespace = value.match(/\s*$/u)?.[0] ?? "";
+  const start = leadingWhitespace.length;
+  const end = value.length - trailingWhitespace.length;
+  const core = value.slice(start, end);
+  return `${leadingWhitespace}${await translateNonEmptyText(session, core, signal)}${trailingWhitespace}`;
+}
+
+async function translateTextLinePreservingBlanks(
+  session: BrowserTranslatorSession,
+  line: string,
+  signal?: AbortSignal,
+): Promise<string> {
+  const blanks = line.match(TEXT_BLANK_PATTERN);
+  if (!blanks?.length) return translateNonEmptyText(session, line, signal);
+
+  const segments = line.split(TEXT_BLANK_PATTERN);
+  let translated = "";
+  for (let index = 0; index < segments.length; index += 1) {
+    translated += await translateTextSegmentPreservingWhitespace(session, segments[index], signal);
+    if (index < blanks.length) translated += blanks[index];
+  }
+  return translated;
 }
 
 async function translateOptionalText(
@@ -208,11 +240,11 @@ export class BrowserDictionaryTranslator {
       if (lines.length > 1) {
         const translatedLines: string[] = [];
         for (const line of lines) {
-          translatedLines.push(line.trim() ? await translateNonEmptyText(session, line, signal) : line);
+          translatedLines.push(line.trim() ? await translateTextLinePreservingBlanks(session, line, signal) : line);
         }
         return translatedLines.join("\n");
       }
-      return await translateNonEmptyText(session, trimmed, signal);
+      return await translateTextLinePreservingBlanks(session, trimmed, signal);
     } catch (error) {
       if (isAbortError(error) || signal?.aborted) {
         return null;
