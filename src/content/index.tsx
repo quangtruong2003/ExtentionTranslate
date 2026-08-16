@@ -16,6 +16,7 @@ import { getCachedDictionaryTranslation, setCachedDictionaryTranslation } from "
 import { Toaster, toast } from "@/components/ui/sonner";
 import popupCss from "@/styles/popup.css?inline";
 import sonnerCss from "sonner/dist/styles.css?inline";
+import { classifySelection, normalizeBrowserSourceLanguage, type BrowserSourceLanguage } from "./selectionMode";
 
 interface PopupState {
   word: string;
@@ -59,6 +60,11 @@ let translationController: AbortController | null = null;
 let translationRequestId: number | null = null;
 let sourceDictionaryEntry: DictionaryEntry | null = null;
 const browserDictionaryTranslator = new BrowserDictionaryTranslator();
+
+function toBrowserTextTargetLanguage(targetLanguage: TargetLanguage): BrowserSourceLanguage {
+  if (targetLanguage === "zh-CN") return "zh";
+  return targetLanguage;
+}
 
 const dictionaryTranslationStorage = {
   get: (key: string) => new Promise<Record<string, unknown>>((resolve) => {
@@ -395,6 +401,8 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   stopAIStream();
   stopDictionaryTranslation();
   stopPreparedPronunciations();
+  const selectionMode = classifySelection(info.text);
+  const myId = ++currentRequestId;
   selectionTriggerInfo = null;
   selectionTriggerPosition = null;
   selectionTriggerPointerDown = false;
@@ -402,8 +410,8 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   currentSelectionInfo = info;
   popupPosition = computePopupPosition(getSelectionRect(info), { width: 420, height: 320 }, getPopupViewport());
   state = {
-    word: info.text,
-    phase: { kind: "loading" },
+    word: selectionMode.sourceText,
+    phase: selectionMode.kind === "text" ? { kind: "translation-loading", sourceText: selectionMode.sourceText } : { kind: "loading" },
     aiLoading: false,
     aiRequested: false,
     hasApiKey: settings.hasOpenRouterApiKey,
@@ -420,16 +428,19 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   schedulePopupPlacement(info);
   addOutsideListeners();
 
-  const myId = ++currentRequestId;
   if (settings.targetLanguage !== "en") {
     void browserDictionaryTranslator.warm(settings.targetLanguage);
   }
   if (shouldAutoAsk && settings.autoAskAIOnPopup && settings.hasOpenRouterApiKey) {
     void handleAskAI({ revealTab: false });
   }
+  if (selectionMode.kind === "text") {
+    void translateSelectedText(info, selectionMode.sourceText, myId);
+    return;
+  }
   try {
     const res = await sendMessage<{ ok: boolean; payload: LookupResponse }>(MESSAGE_TYPES.DICTIONARY_LOOKUP, {
-      word: info.text,
+      word: selectionMode.lookupText,
       language: info.pageLanguage,
       targetLanguage: settings.targetLanguage,
     });
@@ -461,6 +472,67 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   } catch {
     if (myId !== currentRequestId) return;
     setPhase({ kind: "error", code: "INTERNAL" });
+  }
+}
+
+async function translateSelectedText(info: SelectionInfo, sourceText: string, requestId: number): Promise<void> {
+  stopDictionaryTranslation();
+  const controller = new AbortController();
+  translationController = controller;
+  translationRequestId = requestId;
+  const sourceLanguage = normalizeBrowserSourceLanguage(info.pageLanguage) ?? "en";
+  const targetLanguage = toBrowserTextTargetLanguage(settings.targetLanguage);
+
+  const isCurrent = () => requestId === currentRequestId && !controller.signal.aborted && Boolean(state);
+
+  try {
+    if (sourceLanguage === targetLanguage) {
+      if (requestId !== currentRequestId || controller.signal.aborted || !state) return;
+      setState({
+        phase: { kind: "translation-ready", sourceText, translatedText: sourceText, provider: "source" },
+        translationStatus: "source",
+      });
+      return;
+    }
+
+    const translatedText = await browserDictionaryTranslator.translateText(
+      sourceText,
+      sourceLanguage,
+      targetLanguage,
+      controller.signal,
+    );
+    if (requestId !== currentRequestId || controller.signal.aborted || !state) return;
+    if (!translatedText) {
+      setState({
+        phase: { kind: "translation-error", sourceText, code: "TRANSLATOR_UNAVAILABLE" },
+        translationStatus: "fallback",
+      });
+      return;
+    }
+    if (!translatedText.trim()) {
+      setState({
+        phase: { kind: "translation-error", sourceText, code: "TRANSLATION_FAILED" },
+        translationStatus: "fallback",
+      });
+      return;
+    }
+    if (!isCurrent()) return;
+    setState({
+      phase: { kind: "translation-ready", sourceText, translatedText, provider: "browser" },
+      translationStatus: "translated",
+    });
+    requestAnimationFrame(() => currentSelectionInfo && placePopup(getSelectionRect(currentSelectionInfo)));
+  } catch {
+    if (requestId !== currentRequestId || controller.signal.aborted || !state) return;
+    setState({
+      phase: { kind: "translation-error", sourceText, code: "TRANSLATION_FAILED" },
+      translationStatus: "fallback",
+    });
+  } finally {
+    if (translationController === controller) {
+      translationController = null;
+      translationRequestId = null;
+    }
   }
 }
 

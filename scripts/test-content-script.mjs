@@ -14,6 +14,7 @@ const pageHtml = `<!doctype html>
   <body>
     <div style="height: 560px"></div>
     <p id="target">run</p>
+    <p id="sentence-target">Uranium is a radioactive material.</p>
     <div style="height: 1200px"></div>
   </body>
 </html>`;
@@ -700,6 +701,92 @@ async function main() {
       await new Promise((resolve) => setTimeout(resolve, 100));
     }
     if (!toastVisible) throw new Error("The content Shadow DOM did not render the user-facing toast.");
+    await command("Input.dispatchKeyEvent", { type: "rawKeyDown", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
+    await command("Input.dispatchKeyEvent", { type: "keyUp", key: "Escape", code: "Escape", windowsVirtualKeyCode: 27, nativeVirtualKeyCode: 27 });
+    let wordPopupClosedBeforeSentence = false;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      wordPopupClosedBeforeSentence = !(await evaluate(command, "Boolean(document.getElementById('extention-translate-host'))"));
+      if (wordPopupClosedBeforeSentence) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!wordPopupClosedBeforeSentence) throw new Error("Word popup did not close before the sentence selection journey.");
+
+    const sentenceSelection = await evaluate(command, `(() => {
+      const node = document.getElementById("sentence-target").firstChild;
+      const range = document.createRange();
+      range.setStart(node, 0);
+      range.setEnd(node, node.textContent.length);
+      const selection = window.getSelection();
+      selection.removeAllRanges();
+      selection.addRange(range);
+      document.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, cancelable: true }));
+      return selection.toString();
+    })()`);
+    const expectedSentence = "Uranium is a radioactive material.";
+    if (sentenceSelection !== expectedSentence) {
+      throw new Error(`Sentence selection setup failed; got ${JSON.stringify(sentenceSelection)}.`);
+    }
+
+    let sentenceTriggerNode;
+    for (let attempt = 0; attempt < 20; attempt += 1) {
+      const sentenceTriggerDom = await command("DOM.getDocument", { depth: -1, pierce: true });
+      sentenceTriggerNode = findDomNode(
+        sentenceTriggerDom.result?.root,
+        (node) => node.nodeName === "BUTTON" && node.attributes?.includes("data-ext-selection-trigger"),
+      );
+      if (sentenceTriggerNode) break;
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+    if (!sentenceTriggerNode) throw new Error("Sentence selection did not render the icon trigger.");
+    await clickDomNode(command, sentenceTriggerNode.nodeId);
+
+    let sentenceDialog;
+    let sentenceDialogText = "";
+    for (let attempt = 0; attempt < 60; attempt += 1) {
+      const sentenceDom = await command("DOM.getDocument", { depth: -1, pierce: true });
+      sentenceDialog = findDomNode(
+        sentenceDom.result?.root,
+        (node) => node.nodeName === "DIV" && getDomAttribute(node, "role") === "dialog",
+      );
+      sentenceDialogText = getDomText(sentenceDialog);
+      const hasBrowserTranslationState =
+        sentenceDialogText.includes("Đang chuẩn bị bản dịch") ||
+        sentenceDialogText.includes("Dịch bằng trình duyệt") ||
+        sentenceDialogText.includes("Trình duyệt chưa hỗ trợ dịch cặp ngôn ngữ này.") ||
+        sentenceDialogText.includes("Dịch thất bại. Vui lòng thử lại.");
+      if (
+        sentenceDialog &&
+        sentenceDialogText.includes(expectedSentence) &&
+        sentenceDialogText.includes("Bản dịch") &&
+        hasBrowserTranslationState
+      ) {
+        break;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 250));
+    }
+    if (!sentenceDialog) throw new Error("Sentence selection did not open the adaptive popup.");
+    if (!sentenceDialogText.includes(expectedSentence)) {
+      throw new Error(`Sentence translation panel did not preserve the full source sentence: ${JSON.stringify(sentenceDialogText)}`);
+    }
+    if (!sentenceDialogText.includes("Bản dịch")) {
+      throw new Error(`Sentence selection did not mount the Translation tab/panel: ${JSON.stringify(sentenceDialogText)}`);
+    }
+    const sentenceAudioButtons = findDomNodes(
+      sentenceDialog,
+      (node) => node.nodeName === "BUTTON" && /Phát âm|Pronounce|播放/.test(getDomAttribute(node, "aria-label")),
+    );
+    if (sentenceAudioButtons.length > 0 || /\b(?:UK|US)\b/.test(sentenceDialogText)) {
+      throw new Error(`Sentence translation rendered dictionary pronunciation UI: ${JSON.stringify(sentenceDialogText)}`);
+    }
+    if (
+      !sentenceDialogText.includes("Đang chuẩn bị bản dịch") &&
+      !sentenceDialogText.includes("Dịch bằng trình duyệt") &&
+      !sentenceDialogText.includes("Trình duyệt chưa hỗ trợ dịch cặp ngôn ngữ này.") &&
+      !sentenceDialogText.includes("Dịch thất bại. Vui lòng thử lại.")
+    ) {
+      throw new Error(`Sentence translation never reached a browser translation or actionable local-translator state: ${JSON.stringify(sentenceDialogText)}`);
+    }
+
     const workerTarget = await waitForServiceWorker(debugPort);
     workerDevTools = await connectToDevTools(workerTarget.webSocketDebuggerUrl);
     await workerDevTools.command("Runtime.enable");
