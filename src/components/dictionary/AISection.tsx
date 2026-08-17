@@ -41,6 +41,11 @@ export function AISection({
   const previousAnswer = useRef(streamText);
   const showThinking = shouldShowThinking(thinkingEnabled, thinkingText);
   const thinkingProgressTitle = loading && !streamText ? getThinkingProgressTitle(thinkingText) : null;
+  const thinkingLabel = thinkingProgressTitle
+    ? `${thinkingProgressTitle}…`
+    : loading && !streamText
+      ? labels.aiThinking
+      : labels.thinking;
 
   useEffect(() => {
     if (shouldAutoCollapseThinking(previousAnswer.current, streamText, loading)) {
@@ -52,7 +57,7 @@ export function AISection({
   return (
     <div className="min-w-0 max-w-full border-t bg-muted/30">
       <div className="max-h-[min(560px,calc(100vh-180px))] min-w-0 max-w-full overflow-y-auto overflow-x-hidden px-4 py-3">
-        {loading && onStop && (
+        {loading && onStop && !showThinking && (
           <div className="mb-2 flex min-w-0 items-center justify-between gap-2">
             <span className="flex min-w-0 items-center gap-2 text-xs font-medium text-primary">
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin" />
@@ -73,23 +78,40 @@ export function AISection({
 
         {showThinking && (
           <Collapsible open={thinkingOpen} onOpenChange={setThinkingOpen} className="mb-3 min-w-0 rounded-lg border bg-background/70">
-            <CollapsibleTrigger asChild>
-              <button
-                type="button"
-                className="flex min-h-9 w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground"
-                aria-label={thinkingProgressTitle ? `${thinkingProgressTitle}…` : loading && !streamText ? labels.aiThinking : labels.thinking}
-              >
-                {loading && !streamText ? (
-                  <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
-                )}
-                <span className={`min-w-0 flex-1 truncate ${thinkingProgressTitle ? "ext-thinking-progress font-semibold" : ""}`}>
-                  {thinkingProgressTitle ? `${thinkingProgressTitle}…` : loading && !streamText ? labels.aiThinking : labels.thinking}
-                </span>
-                <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${thinkingOpen ? "rotate-180" : ""}`} />
-              </button>
-            </CollapsibleTrigger>
+            <div className="flex min-w-0 items-center">
+              <CollapsibleTrigger asChild>
+                <button
+                  type="button"
+                  className="flex min-h-9 min-w-0 flex-1 items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground"
+                  aria-label={thinkingLabel}
+                >
+                  {loading && !streamText ? (
+                    <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
+                  )}
+                  <span className={`min-w-0 flex-1 truncate ${thinkingProgressTitle ? "ext-thinking-progress font-semibold" : ""}`}>
+                    {thinkingLabel}
+                  </span>
+                  <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${thinkingOpen ? "rotate-180" : ""}`} />
+                </button>
+              </CollapsibleTrigger>
+              {loading && onStop && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mr-2 h-7 shrink-0 gap-1.5 px-2 text-xs"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    onStop();
+                  }}
+                >
+                  <Square className="h-2.5 w-2.5 fill-current" aria-hidden="true" />
+                  {labels.stopGeneration}
+                </Button>
+              )}
+            </div>
             <CollapsibleContent className="min-w-0 border-t px-3 py-2">
               <MarkdownContent className="text-xs text-muted-foreground">{thinkingText}</MarkdownContent>
             </CollapsibleContent>

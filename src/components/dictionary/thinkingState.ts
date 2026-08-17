@@ -13,6 +13,8 @@ export function getThinkingProgressTitle(text: string): string | null {
     const match = /^\d+\.\s+(.+?)(?::\s*)?$/.exec(line);
     if (!match) continue;
     const title = match[1]
+      .replace(/(?:[:：]\s*)?(?:\.{3}|…)+\s*$/u, "")
+      .replace(/[:：]\s*$/u, "")
       .replace(/\*\*/g, "")
       .replace(/__/g, "")
       .replace(/[`*_]/g, "")
