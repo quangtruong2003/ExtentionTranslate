@@ -6,7 +6,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import type { AIMessage, TargetLanguage } from "@/shared/types";
 import { MarkdownContent } from "./MarkdownContent";
 import { getPopupCopy } from "./copy";
-import { shouldAutoCollapseThinking, shouldShowThinking } from "./thinkingState";
+import { getThinkingProgressTitle, shouldAutoCollapseThinking, shouldShowThinking } from "./thinkingState";
 
 interface Props {
   loading: boolean;
@@ -40,6 +40,7 @@ export function AISection({
   const [draft, setDraft] = useState("");
   const previousAnswer = useRef(streamText);
   const showThinking = shouldShowThinking(thinkingEnabled, thinkingText);
+  const thinkingProgressTitle = loading && !streamText ? getThinkingProgressTitle(thinkingText) : null;
 
   useEffect(() => {
     if (shouldAutoCollapseThinking(previousAnswer.current, streamText, loading)) {
@@ -76,15 +77,15 @@ export function AISection({
               <button
                 type="button"
                 className="flex min-h-9 w-full min-w-0 items-center gap-2 px-3 py-2 text-left text-xs font-medium text-muted-foreground hover:text-foreground"
-                aria-label={loading && !streamText ? labels.aiThinking : labels.thinking}
+                aria-label={thinkingProgressTitle ? `${thinkingProgressTitle}…` : loading && !streamText ? labels.aiThinking : labels.thinking}
               >
                 {loading && !streamText ? (
                   <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-primary" />
                 ) : (
                   <Sparkles className="h-3.5 w-3.5 shrink-0 text-primary" />
                 )}
-                <span className="min-w-0 flex-1 truncate">
-                  {loading && !streamText ? labels.aiThinking : labels.thinking}
+                <span className={`min-w-0 flex-1 truncate ${thinkingProgressTitle ? "ext-thinking-progress font-semibold" : ""}`}>
+                  {thinkingProgressTitle ? `${thinkingProgressTitle}…` : loading && !streamText ? labels.aiThinking : labels.thinking}
                 </span>
                 <ChevronDown className={`h-3.5 w-3.5 shrink-0 transition-transform ${thinkingOpen ? "rotate-180" : ""}`} />
               </button>

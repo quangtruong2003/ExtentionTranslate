@@ -133,6 +133,30 @@
   }
 }
 
+@keyframes ext-thinking-progress {
+  from {
+    background-position: -120% 0;
+  }
+  to {
+    background-position: 120% 0;
+  }
+}
+
+.ext-thinking-progress {
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted-foreground)) 0%,
+    hsl(var(--foreground)) 42%,
+    hsl(var(--muted-foreground)) 58%,
+    hsl(var(--muted-foreground)) 100%
+  );
+  background-size: 220% 100%;
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: ext-thinking-progress 1.8s ease-in-out infinite;
+}
+
 .animate-pulse {
   animation: ext-shimmer 1.6s linear infinite;
   background: linear-gradient(
@@ -147,7 +171,13 @@
 @media (prefers-reduced-motion: reduce) {
   .ext-popup-wrapper [role="dialog"],
   .animate-fade-in,
-  .animate-pulse {
+  .animate-pulse,
+  .ext-thinking-progress {
     animation: none;
+  }
+
+  .ext-thinking-progress {
+    color: hsl(var(--foreground));
+    background: none;
   }
 }
