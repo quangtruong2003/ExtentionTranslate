@@ -30,10 +30,10 @@ assert.match(contentSource, /ext-theme-dark/);
 assert.match(contentSource, /ext-theme-light/);
 
 // Settings exposes all three preferences and follows the choice itself.
-assert.match(sectionSource, /Giao diện & ngôn ngữ/, "settings exposes the theme control");
-assert.match(sectionSource, /value: "auto", label: "Tự động/);
-assert.match(sectionSource, /value: "light", label: "Sáng"/);
-assert.match(sectionSource, /value: "dark", label: "Tối"/);
+assert.match(sectionSource, /themeCardTitle/, "settings exposes the theme control");
+assert.match(sectionSource, /value: "auto", label: copy\.themeAutoLabel/);
+assert.match(sectionSource, /value: "light", label: copy\.themeLightLabel/);
+assert.match(sectionSource, /value: "dark", label: copy\.themeDarkLabel/);
 assert.match(appSource, /classList\.toggle\("dark"/, "the settings page follows the effective theme");
 assert.match(appSource, /matchMedia\("\(prefers-color-scheme: dark\)"\)/, "auto mode tracks the OS");
 

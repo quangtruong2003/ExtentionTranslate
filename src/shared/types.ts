@@ -65,6 +65,18 @@ export interface DictionaryRemoteTranslationResponse {
   error?: string;
 }
 
+export interface AIMessage {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export interface VocabularyRecord {
+  word: string;
+  translation?: string;
+  lookedUpAt: number;
+  favorite: boolean;
+}
+
 export interface AIRequest {
   word: string;
   sentence?: string;
@@ -72,6 +84,8 @@ export interface AIRequest {
   contextAfter?: string;
   targetLanguage?: TargetLanguage;
   pageLanguage?: string;
+  history?: AIMessage[];
+  followUpQuestion?: string;
 }
 
 export interface AIResponse {

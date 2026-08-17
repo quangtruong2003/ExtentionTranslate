@@ -1,4 +1,5 @@
 import { useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { DictionaryHeader } from "./DictionaryHeader";
@@ -9,7 +10,7 @@ import { EmptyState } from "./EmptyState";
 import { AISection } from "./AISection";
 import { PopupTabs, type PopupTab } from "./PopupTabs";
 import { TextTranslationPanel } from "./TextTranslationPanel";
-import type { DictionaryEntry, TargetLanguage, TranslationStatus } from "@/shared/types";
+import type { AIMessage, DictionaryEntry, TargetLanguage, TranslationStatus } from "@/shared/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getPopupCopy } from "./copy";
 
@@ -36,12 +37,14 @@ interface Props {
   activeTab: PopupTab;
   targetLanguage: TargetLanguage;
   translationStatus?: TranslationStatus;
+  aiMessages: AIMessage[];
   onAskAI: () => void;
   onTabChange: (tab: PopupTab) => void;
   onRetryLookup: () => void;
   onOpenSettings: () => void;
   onLookupWord?: (word: string) => void;
   onStop?: () => void;
+  onSendMessage?: (text: string) => void;
 }
 
 export function DictionaryPopup(props: Props) {
@@ -59,12 +62,14 @@ export function DictionaryPopup(props: Props) {
     activeTab,
     targetLanguage,
     translationStatus,
+    aiMessages,
     onAskAI,
     onTabChange,
     onRetryLookup,
     onOpenSettings,
     onLookupWord,
     onStop,
+    onSendMessage,
   } = props;
   const labels = getPopupCopy(targetLanguage);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -98,7 +103,7 @@ export function DictionaryPopup(props: Props) {
       <div
         ref={rootRef}
         tabIndex={-1}
-        className="flex max-h-[min(680px,calc(100vh-24px))] w-fit min-w-[340px] max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-2xl animate-fade-in"
+        className="flex max-h-[min(680px,calc(100vh-24px))] w-fit min-w-[340px] max-w-[min(560px,calc(100vw-24px))] flex-col overflow-hidden rounded-xl border border-border/40 bg-popover text-popover-foreground outline-none animate-fade-in"
         role="dialog"
         aria-modal="true"
         onKeyDown={handleTabTrap}
@@ -121,6 +126,7 @@ export function DictionaryPopup(props: Props) {
       <PopupTabs
         activeTab={activeTab}
         aiLoading={aiLoading}
+        dictionaryTranslating={translationStatus === "translating"}
         targetLanguage={targetLanguage}
         primaryLabel={isTranslationPhase ? labels.translationTab : undefined}
         onChange={onTabChange}
@@ -148,7 +154,8 @@ export function DictionaryPopup(props: Props) {
           {phase.kind === "ready" && (
             <ScrollArea className="max-h-[min(600px,calc(100vh-180px))]">
               {translationStatus === "translating" && (
-                <div className="border-b bg-primary/5 px-4 py-2 text-xs text-muted-foreground">
+                <div role="status" aria-live="polite" className="flex items-center gap-2 border-b bg-primary/5 px-4 py-2 text-xs text-muted-foreground">
+                  <Loader2 className="h-3 w-3 animate-spin text-primary" aria-hidden="true" />
                   {labels.translating}
                 </div>
               )}
@@ -211,8 +218,10 @@ export function DictionaryPopup(props: Props) {
             thinkingText={aiThinkingText}
             thinkingEnabled={aiThinkingEnabled}
             error={aiError}
+            messages={aiMessages}
             onRetry={onAskAI}
             onStop={onStop}
+            onSendMessage={onSendMessage}
             targetLanguage={targetLanguage}
           />
         </div>

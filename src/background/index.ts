@@ -3,12 +3,22 @@ import { ExtensionError } from "@/shared/errors";
 import { callOpenRouter, fetchOpenRouterModels, streamOpenRouter } from "@/services/openrouter/client";
 import { lookupDictionarySource, translateDictionaryRemotely } from "./dictionaryHandlers";
 import { getSettings, saveSettings } from "@/services/storage/settings";
+import { clearVocabulary, listVocabulary, removeVocabularyEntry, toggleVocabularyFavorite } from "@/services/storage/vocabulary";
 import { runAIStreamOnPort } from "./streaming";
 import { DictionaryRemoteRequestRegistry } from "./remoteRequestRegistry";
 import { toPopupSettings, type AIRequest, type AIResponse, type DictionaryRemoteTranslationRequest, type ExtensionSettings, type LookupRequest, type LookupResponse } from "@/shared/types";
 import type { OpenRouterModel } from "@/shared/openrouter-types";
 
 const dictionaryRemoteRequests = new DictionaryRemoteRequestRegistry();
+
+const vocabularyStorage = {
+  get: (key: string) => new Promise<Record<string, unknown>>((resolve) => {
+    chrome.storage.local.get(key, (items) => resolve(items as Record<string, unknown>));
+  }),
+  set: (items: Record<string, unknown>) => new Promise<void>((resolve) => {
+    chrome.storage.local.set(items, () => resolve());
+  }),
+};
 
 interface MessageEnvelope<T = unknown> {
   type: string;
@@ -146,6 +156,11 @@ async function handleGetModels(
 chrome.runtime.onMessage.addListener((envelope: MessageEnvelope, _sender, sendResponse) => {
   const { type, payload } = envelope;
 
+  if (type === MESSAGE_TYPES.KEEP_WARM) {
+    sendResponse({ ok: true });
+    return false;
+  }
+
   if (type === MESSAGE_TYPES.GET_SETTINGS) {
     getSettings().then((s) => sendResponse({ ok: true, payload: s }));
     return true;
@@ -169,6 +184,28 @@ chrome.runtime.onMessage.addListener((envelope: MessageEnvelope, _sender, sendRe
     return true;
   }
 
+  if (type === MESSAGE_TYPES.VOCABULARY_LIST) {
+    listVocabulary(vocabularyStorage).then((records) => sendResponse({ ok: true, payload: records }));
+    return true;
+  }
+
+  if (type === MESSAGE_TYPES.VOCABULARY_TOGGLE_FAVORITE) {
+    toggleVocabularyFavorite(vocabularyStorage, (payload as { word: string }).word)
+      .then((records) => sendResponse({ ok: true, payload: records }));
+    return true;
+  }
+
+  if (type === MESSAGE_TYPES.VOCABULARY_REMOVE) {
+    removeVocabularyEntry(vocabularyStorage, (payload as { word: string }).word)
+      .then((records) => sendResponse({ ok: true, payload: records }));
+    return true;
+  }
+
+  if (type === MESSAGE_TYPES.VOCABULARY_CLEAR) {
+    clearVocabulary(vocabularyStorage).then(() => sendResponse({ ok: true }));
+    return true;
+  }
+
   if (type === MESSAGE_TYPES.OPEN_SETTINGS) {
     chrome.runtime.openOptionsPage();
     sendResponse({ ok: true });
@@ -181,6 +218,16 @@ chrome.runtime.onMessage.addListener((envelope: MessageEnvelope, _sender, sendRe
     p.then((r) => sendResponse({ ok: true, payload: r }))
       .catch((err: unknown) => sendResponse({ ok: false, error: String(err) }));
     return true;
+  }
+
+  if (type === MESSAGE_TYPES.PREFETCH_DICTIONARY) {
+    const controller = new AbortController();
+    lookupDictionarySource(payload as LookupRequest, controller.signal)
+      .catch(() => {
+        // Prefetch is best-effort; the real lookup reports errors.
+      });
+    sendResponse({ ok: true });
+    return false;
   }
 
   if (type === MESSAGE_TYPES.DICTIONARY_TRANSLATE_REMOTE) {
@@ -233,6 +280,40 @@ chrome.runtime.onMessage.addListener((envelope: MessageEnvelope, _sender, sendRe
 // Open the options page when the user clicks the toolbar icon.
 chrome.action?.onClicked.addListener(() => {
   chrome.runtime.openOptionsPage();
+});
+
+chrome.commands.onCommand.addListener((command) => {
+  if (command !== "toggle-popup") return;
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tabId = tabs[0]?.id;
+    if (!tabId) return;
+    chrome.tabs.sendMessage(tabId, { type: MESSAGE_TYPES.TOGGLE_POPUP }).catch(() => {
+      // Content script not present on this page.
+    });
+  });
+});
+
+const CONTEXT_MENU_IDS = { word: "ext-lookup-word", text: "ext-translate-text" } as const;
+
+chrome.contextMenus?.removeAll(() => {
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_IDS.word,
+    title: "Tra từ đã chọn",
+    contexts: ["selection"],
+  });
+  chrome.contextMenus.create({
+    id: CONTEXT_MENU_IDS.text,
+    title: "Dịch văn bản đã chọn",
+    contexts: ["selection"],
+  });
+});
+
+chrome.contextMenus?.onClicked.addListener((info, tab) => {
+  if (!tab?.id) return;
+  const mode = info.menuItemId === CONTEXT_MENU_IDS.text ? "text" : "word";
+  chrome.tabs.sendMessage(tab.id, { type: MESSAGE_TYPES.CONTEXT_LOOKUP, payload: { mode } }).catch(() => {
+    // The tab's content script may not be injected (e.g. chrome:// pages).
+  });
 });
 
 export {};

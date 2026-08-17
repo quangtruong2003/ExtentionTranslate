@@ -1,5 +1,7 @@
 import { ExternalLink, LockKeyhole, MonitorCheck, type LucideIcon } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import type { TargetLanguage } from "@/shared/types";
+import { getSettingsCopy } from "../locales";
 
 function getExtensionVersion(): string {
   try {
@@ -28,33 +30,35 @@ function InfoRow({ icon: Icon, children }: InfoRowProps) {
   );
 }
 
-export function AboutSection() {
+interface AboutSectionProps {
+  targetLanguage: TargetLanguage;
+}
+
+export function AboutSection({ targetLanguage }: AboutSectionProps) {
+  const copy = getSettingsCopy(targetLanguage);
+
   return (
     <section aria-labelledby="about-section-title" className="w-full min-w-0 max-w-full space-y-6">
       <Card className="min-w-0 max-w-full">
         <CardHeader>
-          <CardTitle id="about-section-title" className="text-base">Giới thiệu</CardTitle>
-          <CardDescription>ExtentionTranslate phiên bản {getExtensionVersion()}.</CardDescription>
+          <CardTitle id="about-section-title" className="text-base">{copy.aboutTitle}</CardTitle>
+          <CardDescription>{`${copy.aboutVersionPrefix} ${getExtensionVersion()}.`}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 divide-y">
           <InfoRow icon={ExternalLink}>
-            Dữ liệu từ điển tiếng Anh sử dụng{" "}
+            {copy.aboutSourcesLead}{" "}
             <a className="font-medium text-foreground underline hover:text-foreground/80" href="https://dictionaryapi.dev/" target="_blank" rel="noreferrer">dictionaryapi.dev</a>{" "}
-            và{" "}
+            {copy.aboutSourcesConjunction}{" "}
             <a className="font-medium text-foreground underline hover:text-foreground/80" href="https://freedictionaryapi.com/api/v1" target="_blank" rel="noreferrer">FreeDictionaryAPI.com</a>{" "}
-            (CC BY-SA 4.0) làm nguồn dự phòng.
+            {copy.aboutSourcesTail}
           </InfoRow>
-          <InfoRow icon={LockKeyhole}>
-            OpenRouter API key của bạn chỉ được lưu cục bộ trong trình duyệt và dùng để gọi OpenRouter.
-          </InfoRow>
-          <InfoRow icon={MonitorCheck}>
-            Tiện ích hỗ trợ Google Chrome và Microsoft Edge.
-          </InfoRow>
+          <InfoRow icon={LockKeyhole}>{copy.aboutPrivacy}</InfoRow>
+          <InfoRow icon={MonitorCheck}>{copy.aboutBrowserSupport}</InfoRow>
         </CardContent>
       </Card>
 
       <a href="https://dictionaryapi.dev/" target="_blank" rel="noreferrer" className="inline-flex max-w-full items-center gap-1 break-words text-sm font-medium underline hover:text-foreground/80">
-        Xem tài liệu dictionaryapi.dev
+        {copy.aboutDocsLink}
         <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
       </a>
     </section>

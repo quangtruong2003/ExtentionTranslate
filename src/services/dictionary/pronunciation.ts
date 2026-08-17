@@ -21,7 +21,7 @@ interface PronunciationTrigger {
 
 export interface PronunciationSpeechFallback {
   text: string;
-  lang: "en-GB" | "en-US";
+  lang: string;
 }
 
 function stalePlaybackError() {

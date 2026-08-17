@@ -2,7 +2,8 @@ import { ChevronRight, KeyRound, Languages, MousePointer2, Sparkles, type Lucide
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { SELECTION_TRIGGER_MODE_LABELS, SUPPORTED_TARGET_LANGUAGES, type ExtensionSettings } from "@/shared/types";
-import { SETTINGS_NAVIGATION, type SettingsSectionId } from "../navigation";
+import { getSettingsCopy } from "../locales";
+import { getSettingsNavigation, type SettingsSectionId } from "../navigation";
 
 interface OverviewSectionProps {
   settings: ExtensionSettings;
@@ -37,46 +38,45 @@ function StatTile({ icon: Icon, label, value, badge }: StatTileProps) {
 }
 
 export function OverviewSection({ settings, hasApiKey, onNavigate }: OverviewSectionProps) {
+  const copy = getSettingsCopy(settings.targetLanguage);
   const displayLanguage = SUPPORTED_TARGET_LANGUAGES.find((language) => language.value === settings.targetLanguage)?.label ?? settings.targetLanguage;
-  const quickLinks = SETTINGS_NAVIGATION.filter((item) => item.id !== "overview");
+  const quickLinks = getSettingsNavigation(copy).filter((item) => item.id !== "overview");
 
   return (
     <section aria-labelledby="overview-section-title" className="w-full min-w-0 max-w-full space-y-6">
       <div>
-        <h2 id="overview-section-title" className="sr-only">Tổng quan</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          ExtentionTranslate giúp bạn tra nghĩa tiếng Anh và nhận giải thích từ AI ngay khi đọc web. Dưới đây là trạng thái hiện tại của tiện ích.
-        </p>
+        <h2 id="overview-section-title" className="sr-only">{copy.overviewHeading}</h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">{copy.overviewIntro}</p>
       </div>
 
       <div className="grid min-w-0 gap-3 sm:grid-cols-2">
         <StatTile
           icon={MousePointer2}
-          label="Cách kích hoạt khi bôi đen"
+          label={copy.statTriggerMode}
           value={SELECTION_TRIGGER_MODE_LABELS[settings.selectionTriggerMode]}
         />
-        <StatTile icon={Languages} label="Ngôn ngữ hiển thị" value={displayLanguage} />
+        <StatTile icon={Languages} label={copy.statDisplayLanguage} value={displayLanguage} />
         <StatTile
           icon={Sparkles}
-          label="Tự động hỏi AI"
-          value={settings.autoAskAIOnPopup ? "Bật khi mở popup" : "Đang tắt"}
-          badge={{ text: settings.autoAskAIOnPopup ? "Đang bật" : "Đang tắt", tone: settings.autoAskAIOnPopup ? "positive" : "neutral" }}
+          label={copy.statAutoAsk}
+          value={settings.autoAskAIOnPopup ? copy.statAutoAskOnValue : copy.statAutoAskOffValue}
+          badge={{ text: settings.autoAskAIOnPopup ? copy.statAutoAskOnBadge : copy.statAutoAskOffBadge, tone: settings.autoAskAIOnPopup ? "positive" : "neutral" }}
         />
         <StatTile
           icon={KeyRound}
-          label="OpenRouter API key"
-          value={hasApiKey ? "Đã cấu hình" : "Chưa cấu hình"}
-          badge={{ text: hasApiKey ? "Sẵn sàng" : "Cần thiết lập", tone: hasApiKey ? "positive" : "neutral" }}
+          label={copy.statOpenRouterKey}
+          value={hasApiKey ? copy.statOpenRouterKeyConfigured : copy.statOpenRouterKeyMissing}
+          badge={{ text: hasApiKey ? copy.statOpenRouterKeyReadyBadge : copy.statOpenRouterKeySetupBadge, tone: hasApiKey ? "positive" : "neutral" }}
         />
       </div>
 
       <Card className="min-w-0 max-w-full">
         <CardHeader>
-          <CardTitle className="text-base">Đi đến phần cài đặt</CardTitle>
-          <CardDescription>Chọn khu vực bạn muốn điều chỉnh.</CardDescription>
+          <CardTitle className="text-base">{copy.quickLinksTitle}</CardTitle>
+          <CardDescription>{copy.quickLinksDescription}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 p-0">
-          <nav aria-label="Đi đến phần cài đặt" className="divide-y border-t">
+          <nav aria-label={copy.quickLinksTitle} className="divide-y border-t">
             {quickLinks.map((item) => {
               const Icon = item.icon;
               return (

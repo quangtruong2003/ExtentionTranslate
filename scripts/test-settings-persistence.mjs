@@ -6,10 +6,10 @@ const [appSource, backgroundSource] = await Promise.all([
   readFile(new URL("../src/background/index.ts", import.meta.url), "utf8"),
 ]);
 
-const sendMessageSource = appSource.slice(appSource.indexOf("function sendMessage"), appSource.indexOf("function getProjectIconUrl"));
+const sendMessageSource = appSource.slice(appSource.indexOf("function sendMessage"), appSource.indexOf("useEffect(() => {"));
 assert.match(sendMessageSource, /const lastError = chrome\.runtime\.lastError;/);
-assert.match(sendMessageSource, /if \(lastError\) \{[\s\S]*?reject\(new Error\(lastError\.message \|\| "Không thể liên hệ tiện ích\."\)\);/);
-assert.match(sendMessageSource, /if \(!response\?\.ok\) \{[\s\S]*?reject\(new Error\(response\?\.error \|\| "Tiện ích không xác nhận yêu cầu\."\)\);/);
+assert.match(sendMessageSource, /if \(lastError\) \{[\s\S]*?reject\(new Error\(lastError\.message \|\| copy\.contactError\)\);/);
+assert.match(sendMessageSource, /if \(!response\?\.ok\) \{[\s\S]*?reject\(new Error\(response\?\.error \|\| copy\.unacknowledgedError\)\);/);
 
 const initializationSource = appSource.slice(appSource.indexOf("useEffect"), appSource.indexOf("async function handleSave"));
 assert.match(initializationSource, /try \{[\s\S]*?await sendMessage<ExtensionSettings>\("GET_SETTINGS"\)[\s\S]*?\} catch \{[\s\S]*?setSettings\(DEFAULT_SETTINGS\)[\s\S]*?setApiKey\(DEFAULT_SETTINGS\.openRouterApiKey\)[\s\S]*?setModel\(DEFAULT_SETTINGS\.openRouterModel\)[\s\S]*?setSystemPrompt\(DEFAULT_SETTINGS\.systemPrompt\)[\s\S]*?setLoaded\(true\);/);
@@ -35,8 +35,8 @@ for (const field of [
 }
 assert.doesNotMatch(payloadSource, /showPopupOnSelection/);
 assert.match(saveSource, /const next = composeNext\(\);/);
-assert.match(saveSource, /await sendMessage\("SAVE_SETTINGS", next\);[\s\S]*?setSettings\(next\);[\s\S]*?setSaveState\("saved"\);[\s\S]*?toast\.success\("Đã lưu cài đặt"\);/);
-assert.match(saveSource, /catch \{[\s\S]*?setSaveState\("error"\);[\s\S]*?toast\.error\("Không thể lưu cài đặt"\);/);
+assert.match(saveSource, /await sendMessage\("SAVE_SETTINGS", next\);[\s\S]*?setSettings\(next\);[\s\S]*?setSaveState\("saved"\);[\s\S]*?toast\.success\(copy\.savedToast\);/);
+assert.match(saveSource, /catch \{[\s\S]*?setSaveState\("error"\);[\s\S]*?toast\.error\(copy\.saveFailedToast\);/);
 
 assert.match(backgroundSource, /import \{ getSettings, saveSettings \} from "@\/services\/storage\/settings";/);
 const backgroundSaveSource = backgroundSource.slice(backgroundSource.indexOf("if (type === MESSAGE_TYPES.SAVE_SETTINGS)"), backgroundSource.indexOf("if (type === MESSAGE_TYPES.OPEN_SETTINGS)"));

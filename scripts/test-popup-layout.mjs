@@ -23,10 +23,14 @@ assert.doesNotMatch(popupSource, /aria-label=\{labels\.close\}/);
 assert.doesNotMatch(contentSource, /onClose=\{closePopup\}/);
 assert.match(headerSource, /flex shrink-0 items-center gap-1/, "copy and ask-AI return to the header's top-right");
 assert.doesNotMatch(headerSource, /\bX\b/);
-// Borderless popup: no outer border ring.
-assert.doesNotMatch(popupSource, /rounded-xl border /, "the popup renders without an outer border");
+// Thin, subtle outer border (user preference: mờ và mỏng, no heavy shadow).
+assert.match(popupSource, /rounded-xl border border-border\/40/, "the popup renders with a thin, subtle border");
+assert.doesNotMatch(popupSource, /shadow-2xl/, "the popup keeps no heavy drop shadow");
+// The dialog is focused programmatically on open; the browser's default
+// focus ring (outline: auto) would render as a thick dark border.
+assert.match(popupSource, /border-border\/40 bg-popover text-popover-foreground outline-none/, "the focused dialog suppresses the browser focus ring");
 
-console.log("PASS: the popup has no close button, no border, and header actions at the top-right.");
+console.log("PASS: the popup has no close button, a thin subtle border, and header actions at the top-right.");
 
 // Auto-ask mode makes the header's Ask AI button redundant — hide it.
 assert.match(headerSource, /\{!autoAskAI && \(/, "the ask-AI button hides when auto-ask is on");

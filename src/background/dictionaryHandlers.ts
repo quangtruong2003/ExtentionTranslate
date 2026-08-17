@@ -1,4 +1,5 @@
 import { ExtensionError, ERROR_CODES } from "@/shared/errors";
+import { InflightDedupe, raceDictionarySources } from "@/shared/inflight";
 import { fetchFreeDictionary } from "@/services/dictionary/freeDictionary";
 import { fetchFreeDictionaryApi, parseFreeDictionaryApiSource } from "@/services/dictionary/freeDictionaryApi";
 import { getCached, setCached } from "@/services/dictionary/cache";
@@ -6,7 +7,9 @@ import { normalizeTranslatedEntry } from "@/services/dictionary/translation";
 import { resolveDictionaryRemoteFallback } from "@/services/dictionary/remoteFallback";
 import { generateDictionaryEntryWithOpenRouter, translateDictionaryEntryWithOpenRouter } from "@/services/openrouter/client";
 import { getSettings } from "@/services/storage/settings";
+import { recordVocabularyLookup, type VocabularyStorageLike } from "@/services/storage/vocabulary";
 import type {
+  DictionaryEntry,
   DictionaryRemoteTranslationRequest,
   DictionaryRemoteTranslationResponse,
   LookupRequest,
@@ -18,6 +21,21 @@ function isAbortError(error: unknown): boolean {
   return typeof error === "object" && error !== null && "name" in error && (error as { name?: string }).name === "AbortError";
 }
 
+const lookupInflight = new InflightDedupe();
+
+const backgroundVocabularyStorage: VocabularyStorageLike = {
+  get: (key) => new Promise((resolve) => {
+    chrome.storage.local.get(key, (items) => resolve(items as Record<string, unknown>));
+  }),
+  set: (items) => new Promise((resolve) => {
+    chrome.storage.local.set(items, () => resolve());
+  }),
+};
+
+function firstTranslation(entry: DictionaryEntry): string | undefined {
+  return entry.meanings.find((meaning) => meaning.translation)?.translation;
+}
+
 export async function lookupDictionarySource(payload: LookupRequest, signal: AbortSignal): Promise<LookupResponse> {
   const word = payload.word.trim();
   if (!word) return { entry: null, error: "EMPTY" };
@@ -26,24 +44,25 @@ export async function lookupDictionarySource(payload: LookupRequest, signal: Abo
   if (cached) return { entry: cached, sourceEntry: cached, translationStatus: "source" };
 
   try {
-    const entry = await fetchFreeDictionary(word, signal);
+    const entry = await lookupInflight.run(`en::${word.toLowerCase()}`, () =>
+      raceDictionarySources({
+        word,
+        signal,
+        fetchPrimary: (raceSignal) => fetchFreeDictionary(word, raceSignal),
+        fetchSecondary: async (raceSignal) => {
+          const raw = await fetchFreeDictionaryApi(word, raceSignal);
+          return parseFreeDictionaryApiSource(raw, word);
+        },
+      }),
+    );
     setCached(entry);
+    void recordVocabularyLookup(backgroundVocabularyStorage, entry.word, firstTranslation(entry)).catch(() => {
+      // History recording must never break a lookup.
+    });
     return { entry, sourceEntry: entry, translationStatus: "source" };
-  } catch (primaryError) {
-    if (isAbortError(primaryError)) throw primaryError;
-
-    try {
-      const raw = await fetchFreeDictionaryApi(word, signal);
-      const entry = parseFreeDictionaryApiSource(raw, word);
-      if (entry) {
-        setCached(entry);
-        return { entry, sourceEntry: entry, translationStatus: "source" };
-      }
-    } catch (fallbackError) {
-      if (isAbortError(fallbackError)) throw fallbackError;
-    }
-
-    if (primaryError instanceof ExtensionError) return { entry: null, error: primaryError.code };
+  } catch (error) {
+    if (isAbortError(error)) throw error;
+    if (error instanceof ExtensionError) return { entry: null, error: error.code };
     return { entry: null, error: ERROR_CODES.NO_RESULT };
   }
 }

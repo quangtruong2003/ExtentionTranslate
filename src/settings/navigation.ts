@@ -1,6 +1,7 @@
-import { BookText, Info, LayoutDashboard, Sparkles, type LucideIcon } from "lucide-react";
+import { BookMarked, BookText, Info, LayoutDashboard, Sparkles, type LucideIcon } from "lucide-react";
+import type { SettingsCopy } from "./locales";
 
-export type SettingsSectionId = "overview" | "popup" | "openrouter" | "about";
+export type SettingsSectionId = "overview" | "popup" | "openrouter" | "vocabulary" | "about";
 
 export interface SettingsNavigationItem {
   id: SettingsSectionId;
@@ -9,29 +10,12 @@ export interface SettingsNavigationItem {
   description: string;
 }
 
-export const SETTINGS_NAVIGATION: SettingsNavigationItem[] = [
-  {
-    id: "overview",
-    icon: LayoutDashboard,
-    title: "Tổng quan",
-    description: "Xem nhanh trạng thái tiện ích.",
-  },
-  {
-    id: "popup",
-    icon: BookText,
-    title: "Popup & Từ điển",
-    description: "Điều chỉnh tra từ khi bôi đen.",
-  },
-  {
-    id: "openrouter",
-    icon: Sparkles,
-    title: "OpenRouter AI",
-    description: "Quản lý AI, model và hướng dẫn trả lời.",
-  },
-  {
-    id: "about",
-    icon: Info,
-    title: "Giới thiệu",
-    description: "Nguồn dữ liệu, quyền riêng tư và hỗ trợ.",
-  },
-];
+export function getSettingsNavigation(copy: SettingsCopy): SettingsNavigationItem[] {
+  return [
+    { id: "overview", icon: LayoutDashboard, title: copy.navOverviewTitle, description: copy.navOverviewDescription },
+    { id: "popup", icon: BookText, title: copy.navPopupTitle, description: copy.navPopupDescription },
+    { id: "openrouter", icon: Sparkles, title: copy.navOpenRouterTitle, description: copy.navOpenRouterDescription },
+    { id: "vocabulary", icon: BookMarked, title: copy.navVocabularyTitle, description: copy.navVocabularyDescription },
+    { id: "about", icon: Info, title: copy.navAboutTitle, description: copy.navAboutDescription },
+  ];
+}

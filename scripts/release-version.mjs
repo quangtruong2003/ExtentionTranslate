@@ -92,8 +92,13 @@ async function writeVersionedJson(filePath, version) {
 
 export async function updateVersionFiles(cwd, version, paths = {}) {
   const packagePath = paths.packagePath ?? join(cwd, "package.json");
+  const lockfilePath = paths.lockfilePath ?? join(cwd, "package-lock.json");
   const manifestPath = paths.manifestPath ?? join(cwd, "public", "manifest.json");
   await writeVersionedJson(packagePath, version);
+  const lockfile = JSON.parse(await readFile(lockfilePath, "utf8"));
+  lockfile.version = version;
+  if (lockfile.packages?.[""]) lockfile.packages[""].version = version;
+  await writeFile(lockfilePath, `${JSON.stringify(lockfile, null, 2)}\n`, "utf8");
   await writeVersionedJson(manifestPath, version);
 }
 

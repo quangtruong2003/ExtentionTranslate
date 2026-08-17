@@ -4,37 +4,18 @@ import { Button } from "@/components/ui/button";
 import { Toaster, toast } from "@/components/ui/sonner";
 import { DEFAULT_SETTINGS, getOpenRouterSettingsValidationError, type ExtensionSettings } from "@/shared/types";
 import { SettingsSidebar } from "./SettingsSidebar";
-import { SETTINGS_NAVIGATION, type SettingsSectionId } from "./navigation";
+import { getSettingsCopy } from "./locales";
+import { getSettingsNavigation, type SettingsSectionId } from "./navigation";
 import { AboutSection } from "./sections/AboutSection";
 import { OpenRouterSection } from "./sections/OpenRouterSection";
 import { OverviewSection } from "./sections/OverviewSection";
 import { PopupDictionarySection } from "./sections/PopupDictionarySection";
+import { VocabularySection } from "./sections/VocabularySection";
 
 interface MessageResponse<T> {
   ok: boolean;
   payload?: T;
   error?: string;
-}
-
-function sendMessage<T>(type: string, payload?: unknown): Promise<T | undefined> {
-  return new Promise((resolve, reject) => {
-    try {
-      chrome.runtime.sendMessage({ type, payload }, (response?: MessageResponse<T>) => {
-        const lastError = chrome.runtime.lastError;
-        if (lastError) {
-          reject(new Error(lastError.message || "Không thể liên hệ tiện ích."));
-          return;
-        }
-        if (!response?.ok) {
-          reject(new Error(response?.error || "Tiện ích không xác nhận yêu cầu."));
-          return;
-        }
-        resolve(response?.payload);
-      });
-    } catch (error) {
-      reject(error instanceof Error ? error : new Error("Không thể gửi yêu cầu đến tiện ích."));
-    }
-  });
 }
 
 function getProjectIconUrl() {
@@ -61,6 +42,29 @@ export function App() {
   const [loaded, setLoaded] = useState(false);
   const [baseline, setBaseline] = useState<ExtensionSettings>(DEFAULT_SETTINGS);
   const [activeSection, setActiveSection] = useState<SettingsSectionId>("overview");
+  const copy = getSettingsCopy(settings.targetLanguage);
+
+  function sendMessage<T>(type: string, payload?: unknown): Promise<T | undefined> {
+    return new Promise((resolve, reject) => {
+      try {
+        chrome.runtime.sendMessage({ type, payload }, (response?: MessageResponse<T>) => {
+          const lastError = chrome.runtime.lastError;
+          if (lastError) {
+            reject(new Error(lastError.message || copy.contactError));
+            return;
+          }
+          if (!response?.ok) {
+            reject(new Error(response?.error || copy.unacknowledgedError));
+            return;
+          }
+          resolve(response?.payload);
+        });
+      } catch (error) {
+        reject(error instanceof Error ? error : new Error(copy.sendError));
+      }
+    });
+  }
+
   useEffect(() => {
     void (async () => {
       try {
@@ -141,11 +145,11 @@ export function App() {
       setSettings(next);
       setBaseline(next);
       setSaveState("saved");
-      toast.success("Đã lưu cài đặt");
+      toast.success(copy.savedToast);
       setTimeout(() => setSaveState("idle"), 1800);
     } catch {
       setSaveState("error");
-      toast.error("Không thể lưu cài đặt");
+      toast.error(copy.saveFailedToast);
     }
   }
 
@@ -162,23 +166,24 @@ export function App() {
   }
 
   if (!loaded) {
-    return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">Đang tải…</div>;
+    return <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">{copy.loading}</div>;
   }
 
-  const activeNavigation = SETTINGS_NAVIGATION.find((item) => item.id === activeSection) ?? SETTINGS_NAVIGATION[0]!;
+  const navigation = getSettingsNavigation(copy);
+  const activeNavigation = navigation.find((item) => item.id === activeSection) ?? navigation[0]!;
   const projectIconUrl = getProjectIconUrl();
 
   return (
     <div className="min-h-screen w-full max-w-full overflow-x-clip bg-background text-foreground">
       <div className="mx-auto flex min-h-screen w-full min-w-0 max-w-full overflow-x-clip flex-col lg:max-w-7xl lg:flex-row">
-        <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} />
+        <SettingsSidebar activeSection={activeSection} onSelect={setActiveSection} targetLanguage={settings.targetLanguage} />
 
         <main className="w-full min-w-0 max-w-full flex-1">
           <div className="mx-auto w-full min-w-0 max-w-full p-4 pb-28 sm:p-6 sm:pb-28 lg:max-w-4xl lg:p-8 lg:pb-28">
             <header className="mb-8">
               <div className="mb-1 flex items-center gap-1.5 text-xs text-muted-foreground">
                 <img src={projectIconUrl} alt="" className="h-4 w-4 rounded" />
-                <span>Cài đặt</span>
+                <span>{copy.breadcrumbRoot}</span>
                 <span aria-hidden="true">/</span>
                 <span className="font-medium text-foreground">{activeNavigation.title}</span>
               </div>
@@ -203,7 +208,8 @@ export function App() {
                 onResetSystemPrompt={handleResetSystemPrompt}
               />
             )}
-            {activeSection === "about" && <AboutSection />}
+            {activeSection === "vocabulary" && <VocabularySection targetLanguage={settings.targetLanguage} />}
+            {activeSection === "about" && <AboutSection targetLanguage={settings.targetLanguage} />}
           </div>
         </main>
       </div>
@@ -212,15 +218,15 @@ export function App() {
         <div className="fixed inset-x-0 bottom-0 z-40 border-t bg-background/95 backdrop-blur">
           <div className="mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-4 py-3 sm:px-6 lg:px-8">
             <p role="status" aria-live="polite" className="min-w-0 truncate text-sm text-muted-foreground">
-              {settingsValidationError ?? (saveState === "saving" ? "Đang lưu thay đổi…" : saveState === "error" ? "Không thể lưu. Vui lòng thử lại." : "Bạn có thay đổi chưa lưu.")}
+              {settingsValidationError ?? (saveState === "saving" ? copy.saveBarSaving : saveState === "error" ? copy.saveBarError : copy.saveBarDirty)}
             </p>
             <div className="flex shrink-0 items-center gap-2">
               <Button type="button" variant="ghost" onClick={handleDiscard} disabled={saveState === "saving"}>
-                Hủy thay đổi
+                {copy.discard}
               </Button>
               <Button type="button" onClick={handleSave} disabled={saveState === "saving" || Boolean(settingsValidationError)}>
                 {saveState === "saving" ? <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" /> : <Save className="h-4 w-4" aria-hidden="true" />}
-                {saveState === "saving" ? "Đang lưu…" : "Lưu thay đổi"}
+                {saveState === "saving" ? copy.saving : copy.save}
               </Button>
             </div>
           </div>

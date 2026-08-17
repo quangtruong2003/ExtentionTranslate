@@ -1,3 +1,5 @@
+import { fetchWithRetry } from "../../shared/retry.ts";
+
 interface OpenRouterHttpRequest {
   url: string;
   headers: Record<string, string>;
@@ -18,12 +20,12 @@ export async function fetchOpenRouterWithReasoningFallback({
   signal,
   fetchImpl = fetch,
 }: OpenRouterHttpRequest): Promise<Response> {
-  const request = (requestBody: Record<string, unknown>) => fetchImpl(url, {
+  const request = (requestBody: Record<string, unknown>) => fetchWithRetry(url, {
     method: "POST",
     signal,
     headers,
     body: JSON.stringify(requestBody),
-  });
+  }, { fetchImpl });
 
   let response = await request(body);
   if (await isReasoningParameterRejection(response, body)) {

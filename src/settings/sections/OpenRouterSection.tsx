@@ -16,6 +16,7 @@ import {
   type ExtensionSettings,
 } from "@/shared/types";
 import { SettingRow } from "../SettingRow";
+import { getSettingsCopy } from "../locales";
 
 interface OpenRouterSectionProps {
   settings: ExtensionSettings;
@@ -47,6 +48,7 @@ export function OpenRouterSection({
   onResetSystemPrompt,
 }: OpenRouterSectionProps) {
   const [keyCheck, setKeyCheck] = useState<{ state: KeyCheckState; message?: string }>({ state: "idle" });
+  const copy = getSettingsCopy(settings.targetLanguage);
   const [reasoningBudgetInput, setReasoningBudgetInput] = useState(
     settings.openRouterReasoningMaxTokens === null ? "" : String(settings.openRouterReasoningMaxTokens),
   );
@@ -102,33 +104,33 @@ export function OpenRouterSection({
       });
       const count = Array.isArray(response?.payload?.models) ? response.payload!.models!.length : 0;
       if (response?.ok && count > 0) {
-        setKeyCheck({ state: "ok", message: `Key hợp lệ — ${count} model khả dụng.` });
+        setKeyCheck({ state: "ok", message: copy.keyCheckOk.replace("{count}", String(count)) });
       } else {
-        setKeyCheck({ state: "error", message: "Key không hợp lệ hoặc không kết nối được OpenRouter." });
+        setKeyCheck({ state: "error", message: copy.keyCheckFailed });
       }
     } catch {
-      setKeyCheck({ state: "error", message: "Không kiểm tra được key. Vui lòng thử lại." });
+      setKeyCheck({ state: "error", message: copy.keyCheckError });
     }
   }
 
   return (
     <section aria-labelledby="openrouter-section-title" className="w-full min-w-0 max-w-full space-y-6">
-      <h2 id="openrouter-section-title" className="sr-only">OpenRouter AI</h2>
+      <h2 id="openrouter-section-title" className="sr-only">{copy.openrouterHeading}</h2>
 
       <Card className="min-w-0 max-w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <KeyRound className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            Kết nối OpenRouter
+            {copy.connectionCardTitle}
           </CardTitle>
           <CardDescription>
-            Cấu hình để sử dụng tính năng "Hỏi AI". Lấy API key tại{" "}
+            {copy.connectionCardDescriptionLead}{" "}
             <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="font-medium underline hover:text-foreground">openrouter.ai/keys</a>.
           </CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 space-y-5">
           <div className="space-y-2">
-            <Label htmlFor="api-key" className="text-sm font-medium">OpenRouter API Key</Label>
+            <Label htmlFor="api-key" className="text-sm font-medium">{copy.openRouterKeyLabel}</Label>
             <div className="flex min-w-0 flex-col gap-2 sm:flex-row">
               <div className="relative w-full min-w-0 flex-1">
                 <Input
@@ -136,7 +138,7 @@ export function OpenRouterSection({
                   type={showKey ? "text" : "password"}
                   value={apiKey}
                   onChange={(event) => onApiKeyChange(event.target.value)}
-                  placeholder="sk-or-v1-..."
+                  placeholder={copy.openRouterKeyPlaceholder}
                   autoComplete="off"
                   spellCheck={false}
                   className="pr-10"
@@ -145,12 +147,12 @@ export function OpenRouterSection({
                   type="button"
                   onClick={() => onShowKeyChange(!showKey)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                  aria-label={showKey ? "Ẩn API key" : "Hiện API key"}
+                  aria-label={showKey ? copy.hideKeyAria : copy.showKeyAria}
                 >
                   {showKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
-              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onApiKeyChange("")} disabled={!apiKey}>Xóa key</Button>
+              <Button type="button" variant="outline" className="w-full sm:w-auto" onClick={() => onApiKeyChange("")} disabled={!apiKey}>{copy.clearKey}</Button>
               <Button
                 type="button"
                 variant="outline"
@@ -158,7 +160,7 @@ export function OpenRouterSection({
                 onClick={() => void handleCheckKey()}
                 disabled={!apiKey.trim() || keyCheck.state === "checking"}
               >
-                {keyCheck.state === "checking" ? "Đang kiểm tra…" : "Kiểm tra key"}
+                {keyCheck.state === "checking" ? copy.checkingKey : copy.checkKey}
               </Button>
             </div>
             {keyCheck.state !== "idle" && keyCheck.state !== "checking" && (
@@ -166,13 +168,13 @@ export function OpenRouterSection({
                 {keyCheck.message}
               </p>
             )}
-            <p className="text-xs text-muted-foreground">API key được lưu cục bộ trong trình duyệt và chỉ được dùng để gọi OpenRouter.</p>
+            <p className="text-xs text-muted-foreground">{copy.openRouterKeyNote}</p>
           </div>
 
           <div className="min-w-0 space-y-2 border-t pt-5" role="group" aria-labelledby="model-label">
-            <Label id="model-label" className="text-sm font-medium">Model</Label>
+            <Label id="model-label" className="text-sm font-medium">{copy.modelLabel}</Label>
             <ModelSelector value={model} onChange={onModelChange} apiKey={apiKey} />
-            <p className="text-xs text-muted-foreground">Tìm kiếm và chọn từ hơn 500+ model của OpenRouter. Có thể nhập model tuỳ chỉnh.</p>
+            <p className="text-xs text-muted-foreground">{copy.modelHint}</p>
           </div>
         </CardContent>
       </Card>
@@ -181,16 +183,16 @@ export function OpenRouterSection({
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            Hành vi AI
+            {copy.behaviorCardTitle}
           </CardTitle>
-          <CardDescription>Điều chỉnh cách AI suy luận và trả lời trong popup.</CardDescription>
+          <CardDescription>{copy.behaviorCardDescription}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 space-y-5">
           <div className="divide-y">
             <SettingRow
               id="openrouter-thinking"
-              title="Bật chế độ suy luận AI"
-              description="Cho phép model hỗ trợ reasoning suy luận trước khi trả lời. Phần suy luận được thu gọn mặc định trong popup."
+              title={copy.thinkingTitle}
+              description={copy.thinkingDescription}
             >
               <Switch
                 id="openrouter-thinking"
@@ -203,8 +205,8 @@ export function OpenRouterSection({
           <div className="space-y-4 border-t pt-5">
             <SettingRow
               id="openrouter-reasoning-effort"
-              title="Mức reasoning"
-              description="Chọn mức độ suy luận khi không nhập Reasoning budget chính xác."
+              title={copy.reasoningEffortTitle}
+              description={copy.reasoningEffortDescription}
             >
               <Select
                 value={settings.openRouterReasoningEffort}
@@ -226,7 +228,7 @@ export function OpenRouterSection({
 
             <div className="grid gap-4 border-t pt-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label htmlFor="openrouter-reasoning-budget" className="text-sm font-medium">Reasoning budget</Label>
+                <Label htmlFor="openrouter-reasoning-budget" className="text-sm font-medium">{copy.reasoningBudgetLabel}</Label>
                 <Input
                   id="openrouter-reasoning-budget"
                   type="number"
@@ -236,13 +238,13 @@ export function OpenRouterSection({
                   inputMode="numeric"
                   value={reasoningBudgetInput}
                   onChange={(event) => updateReasoningBudget(event.target.value)}
-                  placeholder="Tự động"
+                  placeholder={copy.reasoningBudgetPlaceholder}
                 />
-                <p className="text-xs leading-relaxed text-muted-foreground">Để trống để dùng mức reasoning. Phạm vi: 1024–8192 token.</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{copy.reasoningBudgetHint}</p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="openrouter-max-output-tokens" className="text-sm font-medium">Max output tokens</Label>
+                <Label htmlFor="openrouter-max-output-tokens" className="text-sm font-medium">{copy.maxTokensLabel}</Label>
                 <Input
                   id="openrouter-max-output-tokens"
                   type="number"
@@ -253,7 +255,7 @@ export function OpenRouterSection({
                   value={maxOutputTokensInput}
                   onChange={(event) => updateMaxOutputTokens(event.target.value)}
                 />
-                <p className="text-xs leading-relaxed text-muted-foreground">Giới hạn tổng output của Hỏi AI. Phạm vi: 512–8192 token.</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">{copy.maxTokensHint}</p>
               </div>
             </div>
 
@@ -264,10 +266,10 @@ export function OpenRouterSection({
 
           <div className="space-y-2 border-t pt-5">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <Label htmlFor="system-prompt" className="text-sm font-medium">System Prompt</Label>
+              <Label htmlFor="system-prompt" className="text-sm font-medium">{copy.systemPromptLabel}</Label>
               <Button type="button" variant="ghost" size="sm" className="h-7 gap-1.5 px-2 text-xs" onClick={onResetSystemPrompt}>
                 <Trash2 className="h-3 w-3" aria-hidden="true" />
-                Khôi phục mặc định
+                {copy.resetSystemPrompt}
               </Button>
             </div>
             <Textarea
@@ -277,9 +279,7 @@ export function OpenRouterSection({
               rows={10}
               className="font-mono text-xs leading-relaxed"
             />
-            <p className="text-xs leading-relaxed text-muted-foreground">
-              System Prompt điều khiển ngôn ngữ và cách trả lời của tab AI trong popup. Khi từ điển không có dữ liệu, prompt này cũng định dạng bản dịch JSON dùng cho tab Từ điển.
-            </p>
+            <p className="text-xs leading-relaxed text-muted-foreground">{copy.systemPromptHint}</p>
           </div>
         </CardContent>
       </Card>

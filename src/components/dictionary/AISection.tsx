@@ -3,7 +3,7 @@ import { ChevronDown, Loader2, Sparkles, Square } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import type { TargetLanguage } from "@/shared/types";
+import type { AIMessage, TargetLanguage } from "@/shared/types";
 import { MarkdownContent } from "./MarkdownContent";
 import { getPopupCopy } from "./copy";
 import { shouldAutoCollapseThinking, shouldShowThinking } from "./thinkingState";
@@ -13,10 +13,12 @@ interface Props {
   requested: boolean;
   onRetry?: () => void;
   onStop?: () => void;
+  onSendMessage?: (text: string) => void;
   streamText?: string;
   thinkingText?: string;
   thinkingEnabled: boolean;
   error?: string;
+  messages: AIMessage[];
   targetLanguage: TargetLanguage;
 }
 
@@ -25,14 +27,17 @@ export function AISection({
   requested,
   onRetry,
   onStop,
+  onSendMessage,
   streamText = "",
   thinkingText = "",
   thinkingEnabled,
   error,
+  messages,
   targetLanguage,
 }: Props) {
   const labels = getPopupCopy(targetLanguage);
   const [thinkingOpen, setThinkingOpen] = useState(false);
+  const [draft, setDraft] = useState("");
   const previousAnswer = useRef(streamText);
   const showThinking = shouldShowThinking(thinkingEnabled, thinkingText);
 
@@ -106,6 +111,24 @@ export function AISection({
           </div>
         )}
 
+        {messages.map((message, index) => {
+          // The final assistant turn is rendered from streamText below; skip
+          // it here so the completed answer never renders twice.
+          if (index === messages.length - 1 && message.role === "assistant") return null;
+          if (message.role === "user") {
+            return (
+              <div key={index} className="mb-2 flex justify-end">
+                <span className="max-w-[85%] whitespace-pre-wrap break-words rounded-lg bg-primary/10 px-3 py-1.5 text-xs">{message.content}</span>
+              </div>
+            );
+          }
+          return (
+            <div key={index} className="mb-3 min-w-0 max-w-full">
+              <MarkdownContent>{message.content}</MarkdownContent>
+            </div>
+          );
+        })}
+
         {streamText && (
           <div className="min-w-0 max-w-full">
             <MarkdownContent>{streamText}</MarkdownContent>
@@ -133,6 +156,30 @@ export function AISection({
               </button>
             )}
           </div>
+        )}
+
+        {!loading && onSendMessage && (streamText || messages.some((message) => message.role === "assistant")) && (
+          <form
+            className="mt-3 flex items-center gap-2 border-t pt-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (!draft.trim()) return;
+              onSendMessage(draft);
+              setDraft("");
+            }}
+          >
+            <input
+              type="text"
+              value={draft}
+              onChange={(event) => setDraft(event.target.value)}
+              placeholder={labels.chatPlaceholder}
+              aria-label={labels.chatPlaceholder}
+              className="h-8 min-w-0 flex-1 rounded-md border bg-background px-2 text-xs outline-none focus-visible:ring-1 focus-visible:ring-primary"
+            />
+            <Button type="submit" size="sm" className="h-8 shrink-0 px-3" disabled={!draft.trim()}>
+              {labels.chatSend}
+            </Button>
+          </form>
         )}
       </div>
     </div>

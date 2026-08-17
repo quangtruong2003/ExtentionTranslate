@@ -9,12 +9,13 @@ export type PopupTab = "dictionary" | "ai";
 interface Props {
   activeTab: PopupTab;
   aiLoading: boolean;
+  dictionaryTranslating?: boolean;
   targetLanguage: TargetLanguage;
   primaryLabel?: string;
   onChange: (tab: PopupTab) => void;
 }
 
-export function PopupTabs({ activeTab, aiLoading, targetLanguage, primaryLabel, onChange }: Props) {
+export function PopupTabs({ activeTab, aiLoading, dictionaryTranslating, targetLanguage, primaryLabel, onChange }: Props) {
   const copy = getPopupCopy(targetLanguage);
   const dictionaryButtonRef = useRef<HTMLButtonElement>(null);
   const aiButtonRef = useRef<HTMLButtonElement>(null);
@@ -56,6 +57,7 @@ export function PopupTabs({ activeTab, aiLoading, targetLanguage, primaryLabel, 
             <Icon className="h-3.5 w-3.5" />
             <span>{label}</span>
             {id === "ai" && aiLoading && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />}
+            {id === "dictionary" && dictionaryTranslating && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />}
             {selected && <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-primary" />}
           </button>
         );

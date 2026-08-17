@@ -1,11 +1,15 @@
-import { SETTINGS_NAVIGATION, type SettingsSectionId } from "./navigation";
+import type { TargetLanguage } from "@/shared/types";
+import { getSettingsCopy } from "./locales";
+import { getSettingsNavigation, type SettingsNavigationItem, type SettingsSectionId } from "./navigation";
 
 interface SettingsSidebarProps {
   activeSection: SettingsSectionId;
   onSelect: (section: SettingsSectionId) => void;
+  targetLanguage: TargetLanguage;
 }
 
 interface NavigationItemsProps extends SettingsSidebarProps {
+  navigation: SettingsNavigationItem[];
   compact?: boolean;
 }
 
@@ -32,10 +36,10 @@ function getExtensionVersion(): string {
   return "";
 }
 
-function NavigationItems({ activeSection, onSelect, compact = false }: NavigationItemsProps) {
+function NavigationItems({ activeSection, onSelect, navigation, compact = false }: NavigationItemsProps) {
   return (
     <>
-      {SETTINGS_NAVIGATION.map((item) => {
+      {navigation.map((item) => {
         const Icon = item.icon;
         const active = item.id === activeSection;
 
@@ -67,16 +71,18 @@ function NavigationItems({ activeSection, onSelect, compact = false }: Navigatio
   );
 }
 
-export function SettingsSidebar({ activeSection, onSelect }: SettingsSidebarProps) {
+export function SettingsSidebar({ activeSection, onSelect, targetLanguage }: SettingsSidebarProps) {
   const version = getExtensionVersion();
+  const copy = getSettingsCopy(targetLanguage);
+  const navigation = getSettingsNavigation(copy);
 
   return (
     <>
       <nav
-        aria-label="Điều hướng cài đặt"
+        aria-label={copy.sidebarNavLabel}
         className="sticky top-0 z-30 flex h-12 w-full min-w-0 max-w-full items-center gap-1 overflow-x-auto overflow-y-hidden [scrollbar-width:none] [&::-webkit-scrollbar]:hidden border-b bg-background/95 px-3 backdrop-blur lg:hidden"
       >
-        <NavigationItems activeSection={activeSection} onSelect={onSelect} compact />
+        <NavigationItems activeSection={activeSection} onSelect={onSelect} targetLanguage={targetLanguage} navigation={navigation} compact />
       </nav>
 
       <aside className="sticky top-0 hidden h-screen w-72 shrink-0 flex-col border-r bg-background lg:flex">
@@ -84,16 +90,16 @@ export function SettingsSidebar({ activeSection, onSelect }: SettingsSidebarProp
           <img src={getProjectIconUrl()} alt="" className="h-9 w-9 shrink-0 rounded-lg" />
           <div className="min-w-0">
             <p className="truncate text-sm font-semibold tracking-tight">ExtentionTranslate</p>
-            <p className="text-xs text-muted-foreground">Cài đặt tiện ích</p>
+            <p className="text-xs text-muted-foreground">{copy.sidebarSubtitle}</p>
           </div>
         </div>
 
-        <nav aria-label="Điều hướng cài đặt" className="flex-1 space-y-1 overflow-y-auto p-4">
-          <NavigationItems activeSection={activeSection} onSelect={onSelect} />
+        <nav aria-label={copy.sidebarNavLabel} className="flex-1 space-y-1 overflow-y-auto p-4">
+          <NavigationItems activeSection={activeSection} onSelect={onSelect} targetLanguage={targetLanguage} navigation={navigation} />
         </nav>
 
         <div className="border-t px-6 py-4">
-          <p className="text-xs text-muted-foreground">{version ? `Phiên bản ${version}` : "ExtentionTranslate"}</p>
+          <p className="text-xs text-muted-foreground">{version ? `${copy.sidebarVersionPrefix} ${version}` : "ExtentionTranslate"}</p>
         </div>
       </aside>
     </>

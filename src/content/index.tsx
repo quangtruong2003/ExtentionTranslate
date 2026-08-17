@@ -2,8 +2,9 @@ import { createRoot, type Root } from "react-dom/client";
 import { StrictMode, useLayoutEffect, useRef } from "react";
 import { DictionaryPopup, type PopupPhase } from "@/components/dictionary/DictionaryPopup";
 import { getPopupCopy } from "@/components/dictionary/copy";
-import { AI_STREAM_PORT_NAME, POPUP_HOST_ID, MESSAGE_TYPES, SELECTION_DEBOUNCE_MS } from "@/shared/constants";
-import { DEFAULT_POPUP_SETTINGS, normalizeSettings, toPopupSettings, type AIRequest, type AIStreamEvent, type DictionaryEntry, type DictionaryRemoteTranslationResponse, type LookupResponse, type PopupSettings, type TargetLanguage, type TranslationStatus } from "@/shared/types";
+import { AI_STREAM_PORT_NAME, POPUP_HOST_ID, MESSAGE_TYPES, SELECTION_DEBOUNCE_MS, KEEP_WARM_INTERVAL_MS } from "@/shared/constants";
+import { createStreamBatcher, type StreamBatcher } from "@/shared/streamBatcher";
+import { DEFAULT_POPUP_SETTINGS, normalizeSettings, toPopupSettings, type AIMessage, type AIRequest, type AIStreamEvent, type DictionaryEntry, type DictionaryRemoteTranslationResponse, type LookupResponse, type PopupSettings, type TargetLanguage, type TranslationStatus } from "@/shared/types";
 import type { PopupTab } from "@/components/dictionary/PopupTabs";
 import { getCurrentSelection, type SelectionInfo } from "./selection";
 import { computePopupPosition, computeSelectionTriggerPosition, constrainPopupSize, getPopupViewport, type Position } from "./positioning";
@@ -29,6 +30,7 @@ interface PopupState {
   aiThinkingEnabled: boolean;
   hasApiKey: boolean;
   aiDone: boolean;
+  aiMessages: AIMessage[];
   activeTab: PopupTab;
   targetLanguage: TargetLanguage;
   translationStatus: TranslationStatus;
@@ -53,12 +55,13 @@ let resizeListener: (() => void) | null = null;
 // CDP device-metric overrides and some SPA viewport mutations change the
 // visual viewport without firing resize/visualViewport events; the poll below
 // is the only reliable re-anchor for them (see the zoom E2E contract).
-let viewportWatchTimer: number | null = null;
 let lastViewportKey = "";
 let debounceTimer: number | null = null;
 let settings: PopupSettings = DEFAULT_POPUP_SETTINGS;
 let settingsRevision = 0;
 let aiPort: chrome.runtime.Port | null = null;
+let aiBatcher: StreamBatcher | null = null;
+let keepWarmTimer: number | null = null;
 let translationController: AbortController | null = null;
 let translationRequestId: number | null = null;
 let sourceDictionaryEntry: DictionaryEntry | null = null;
@@ -146,6 +149,7 @@ function render() {
           onOpenSettings={openSettingsPage}
           onLookupWord={handleLookupWord}
           onStop={handleStopAI}
+          onSendMessage={handleSendAIMessage}
           onTabChange={(activeTab) => setState({ activeTab })}
         />
       ) : (
@@ -243,7 +247,7 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
   );
 }
 
-function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettings, onLookupWord, onStop, onTabChange }: {
+function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettings, onLookupWord, onStop, onSendMessage, onTabChange }: {
   state: PopupState;
   autoAskAI: boolean;
   onAskAI: () => void;
@@ -251,6 +255,7 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
   onOpenSettings: () => void;
   onLookupWord: (word: string) => void;
   onStop: () => void;
+  onSendMessage: (text: string) => void;
   onTabChange: (tab: PopupTab) => void;
 }) {
   useLayoutEffect(() => {
@@ -285,6 +290,7 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
           aiStreamText={state.aiStreamText}
           aiThinkingText={state.aiThinkingText}
           aiThinkingEnabled={state.aiThinkingEnabled}
+          aiMessages={state.aiMessages}
           hasApiKey={state.hasApiKey}
           autoAskAI={autoAskAI}
           activeTab={state.activeTab}
@@ -296,6 +302,7 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
           onOpenSettings={onOpenSettings}
           onLookupWord={onLookupWord}
           onStop={onStop}
+          onSendMessage={onSendMessage}
         />
       </div>
       <Toaster position="bottom-center" richColors closeButton />
@@ -370,27 +377,48 @@ function placeSelectionTrigger(rect: DOMRect) {
   return true;
 }
 
+let viewportWatchTimer: number | null = null;
+let viewportResizeListener: (() => void) | null = null;
+
+function checkViewportChange() {
+  if ((!popupWasOpened && !selectionTriggerInfo) || !currentSelectionInfo) return;
+  const viewport = getPopupViewport();
+  const viewportKey = [viewport.width, viewport.height, viewport.offsetLeft ?? 0, viewport.offsetTop ?? 0].join(":");
+  if (viewportKey !== lastViewportKey) {
+    lastViewportKey = viewportKey;
+    if (popupWasOpened) placePopup(getSelectionRect(currentSelectionInfo));
+    else placeSelectionTrigger(getSelectionRect(currentSelectionInfo));
+  }
+}
+
 function startViewportWatcher() {
-  if (viewportWatchTimer !== null) return;
-  const watch = () => {
-    viewportWatchTimer = null;
-    if ((!popupWasOpened && !selectionTriggerInfo) || !currentSelectionInfo) return;
-    const viewport = getPopupViewport();
-    const viewportKey = [viewport.width, viewport.height, viewport.offsetLeft ?? 0, viewport.offsetTop ?? 0].join(":");
-    if (viewportKey !== lastViewportKey) {
-      lastViewportKey = viewportKey;
-      if (popupWasOpened) placePopup(getSelectionRect(currentSelectionInfo));
-      else placeSelectionTrigger(getSelectionRect(currentSelectionInfo));
-    }
-    viewportWatchTimer = window.setTimeout(watch, 50);
-  };
-  watch();
+  if (!viewportResizeListener) {
+    viewportResizeListener = () => checkViewportChange();
+    window.addEventListener("resize", viewportResizeListener);
+    window.visualViewport?.addEventListener("resize", viewportResizeListener);
+    window.visualViewport?.addEventListener("scroll", viewportResizeListener);
+  }
+  if (viewportWatchTimer === null) {
+    // Safety poll for CDP zoom overrides and SPA viewport mutations that do
+    // not fire resize/visualViewport events (see the zoom E2E contract).
+    const watch = () => {
+      checkViewportChange();
+      viewportWatchTimer = window.setTimeout(watch, 250);
+    };
+    viewportWatchTimer = window.setTimeout(watch, 250);
+  }
 }
 
 function stopViewportWatcher() {
   if (viewportWatchTimer !== null) {
     window.clearTimeout(viewportWatchTimer);
     viewportWatchTimer = null;
+  }
+  if (viewportResizeListener) {
+    window.removeEventListener("resize", viewportResizeListener);
+    window.visualViewport?.removeEventListener("resize", viewportResizeListener);
+    window.visualViewport?.removeEventListener("scroll", viewportResizeListener);
+    viewportResizeListener = null;
   }
   lastViewportKey = "";
 }
@@ -478,6 +506,7 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
     aiRequested: false,
     hasApiKey: settings.hasOpenRouterApiKey,
     aiDone: false,
+    aiMessages: [],
     aiStreamText: "",
     aiThinkingText: "",
     aiThinkingEnabled: settings.openRouterThinkingEnabled,
@@ -489,6 +518,7 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
   render();
   schedulePopupPlacement(info);
   addOutsideListeners();
+  startKeepWarm();
 
   if (shouldAutoAsk && settings.autoAskAIOnPopup && settings.hasOpenRouterApiKey) {
     void handleAskAI({ revealTab: false });
@@ -575,6 +605,11 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
     aiDone: true,
   });
   const myId = currentRequestId;
+  const isFirstQuestion = state.aiMessages.length === 0;
+  const followUpQuestion = !isFirstQuestion
+    && state.aiMessages[state.aiMessages.length - 1]?.role === "user"
+    ? state.aiMessages[state.aiMessages.length - 1].content
+    : undefined;
   const req: AIRequest = {
     word: state.word,
     ...(settings.includeSelectionContext ? {
@@ -583,22 +618,41 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
       contextAfter: currentSelectionInfo.contextAfter,
       pageLanguage: currentSelectionInfo.pageLanguage,
     } : {}),
+    ...(isFirstQuestion ? {} : {
+      history: state.aiMessages.slice(0, followUpQuestion ? -1 : undefined),
+      followUpQuestion,
+    }),
   };
   try {
     const port = chrome.runtime.connect({ name: AI_STREAM_PORT_NAME });
     aiPort = port;
     let settled = false;
+    aiBatcher?.dispose();
+    aiBatcher = createStreamBatcher((pending) => {
+      if (myId !== currentRequestId || aiPort !== port || !state) return;
+      setState({
+        aiStreamText: `${state.aiStreamText}${pending.text}`,
+        aiThinkingText: `${state.aiThinkingText}${pending.thinking}`,
+      });
+    });
+    const batcher = aiBatcher;
     port.onMessage.addListener((event: AIStreamEvent) => {
       if (myId !== currentRequestId || aiPort !== port || !state) return;
       if (event.type === "chunk") {
-        setState({ aiStreamText: `${state.aiStreamText}${event.text}` });
+        batcher.appendText(event.text);
       } else if (event.type === "thinking") {
-        setState({ aiThinkingText: `${state.aiThinkingText}${event.text}` });
+        batcher.appendThinking(event.text);
       } else if (event.type === "done") {
         settled = true;
-        setState({ aiLoading: false, aiStreamText: event.raw, aiThinkingText: event.thinking });
+        batcher.flushNow();
+        const assistantMessage: AIMessage = { role: "assistant", content: event.raw };
+        const nextMessages = isFirstQuestion
+          ? [{ role: "user" as const, content: state.word }, assistantMessage]
+          : [...state.aiMessages, assistantMessage];
+        setState({ aiLoading: false, aiStreamText: event.raw, aiThinkingText: event.thinking, aiMessages: nextMessages });
       } else {
         settled = true;
+        batcher.flushNow();
         setState({ aiLoading: false, aiError: event.code });
         toast.error(getPopupCopy(settings.targetLanguage).errorMessage(event.code));
       }
@@ -732,6 +786,7 @@ function showSelectionTrigger(info: SelectionInfo) {
   ensureMounted();
   render();
   addOutsideListeners();
+  startKeepWarm();
 }
 
 function activateSelectionTrigger() {
@@ -742,6 +797,7 @@ function activateSelectionTrigger() {
 }
 
 function closePopup() {
+  stopKeepWarm();
   stopAIStream();
   stopDictionaryTranslation();
   stopPreparedPronunciations();
@@ -766,15 +822,37 @@ function closePopup() {
 }
 
 function stopAIStream() {
+  aiBatcher?.dispose();
+  aiBatcher = null;
   if (!aiPort) return;
   const port = aiPort;
   aiPort = null;
   port.disconnect();
 }
 
+function startKeepWarm() {
+  if (keepWarmTimer !== null) return;
+  keepWarmTimer = window.setInterval(() => {
+    void sendMessage(MESSAGE_TYPES.KEEP_WARM, undefined);
+  }, KEEP_WARM_INTERVAL_MS);
+}
+
+function stopKeepWarm() {
+  if (keepWarmTimer === null) return;
+  window.clearInterval(keepWarmTimer);
+  keepWarmTimer = null;
+}
+
 function handleStopAI() {
   stopAIStream();
   if (state) setState({ aiLoading: false });
+}
+
+function handleSendAIMessage(text: string) {
+  const trimmed = text.trim();
+  if (!state || !trimmed || state.aiLoading) return;
+  setState({ aiMessages: [...state.aiMessages, { role: "user", content: trimmed }] });
+  void handleAskAI({ revealTab: false });
 }
 
 function addOutsideListeners() {
@@ -832,7 +910,7 @@ function removeOutsideListeners() {
 }
 
 function onSelectionEvent(ev: MouseEvent | KeyboardEvent | null) {
-  if (settings.selectionTriggerMode === "off") return;
+  if (settings.selectionTriggerMode === "off" && !(ev instanceof MouseEvent && ev.altKey)) return;
   // Ignore selection inside our shadow host
   const target = ev?.target as Node | null;
   if (hostEl && target && (target === hostEl || hostEl.contains(target))) {
@@ -842,10 +920,10 @@ function onSelectionEvent(ev: MouseEvent | KeyboardEvent | null) {
     window.clearTimeout(debounceTimer);
   }
   const pointerPosition = ev instanceof MouseEvent ? { x: ev.clientX, y: ev.clientY } : undefined;
-  debounceTimer = window.setTimeout(() => {
+  const forceOpen = ev instanceof MouseEvent && ev.altKey;
+    debounceTimer = window.setTimeout(() => {
       void (async () => {
-        await refreshSettings();
-       if (settings.selectionTriggerMode === "off") return;
+       if (settings.selectionTriggerMode === "off" && !forceOpen) return;
        const sel = getCurrentSelection(target, pointerPosition);
        if (!sel) {
          const liveSelection = window.getSelection();
@@ -858,8 +936,16 @@ function onSelectionEvent(ev: MouseEvent | KeyboardEvent | null) {
          return;
        }
        lastSelectionText = sel.text;
-       if (settings.selectionTriggerMode === "icon") showSelectionTrigger(sel);
-       else void openPopup(sel, true);
+       const prefetchMode = classifySelection(sel.text);
+       if (prefetchMode.kind === "word" && prefetchMode.lookupText) {
+         void sendMessage(MESSAGE_TYPES.PREFETCH_DICTIONARY, {
+           word: prefetchMode.lookupText,
+           language: sel.pageLanguage,
+           targetLanguage: settings.targetLanguage,
+         });
+       }
+       if (forceOpen || settings.selectionTriggerMode === "popup") void openPopup(sel, true);
+       else if (settings.selectionTriggerMode === "icon") showSelectionTrigger(sel);
       })();
   }, SELECTION_DEBOUNCE_MS);
 }
@@ -934,4 +1020,28 @@ function watchSettings() {
     },
     true,
   );
+
+  chrome.runtime.onMessage.addListener((message: { type?: string; payload?: { mode?: "word" | "text" } }, _sender, sendResponse) => {
+    if (message?.type === MESSAGE_TYPES.TOGGLE_POPUP) {
+      if (popupWasOpened || selectionTriggerInfo) {
+        closePopup();
+      } else {
+        const sel = getCurrentSelection();
+        if (sel) {
+          lastSelectionText = sel.text;
+          void openPopup(sel, true);
+        }
+      }
+      sendResponse({ ok: true });
+      return false;
+    }
+    if (message?.type !== MESSAGE_TYPES.CONTEXT_LOOKUP) return false;
+    const sel = getCurrentSelection();
+    if (sel) {
+      lastSelectionText = sel.text;
+      void openPopup(sel, message.payload?.mode !== "text");
+    }
+    sendResponse({ ok: true });
+    return false;
+  });
 })();

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import { Volume2, Copy, Check, Sparkles } from "lucide-react";
+import { Volume2, Copy, Check, Sparkles, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import { MESSAGE_TYPES } from "@/shared/constants";
 import type { DictionaryEntry, TargetLanguage } from "@/shared/types";
 import { toast } from "@/components/ui/sonner";
 import {
@@ -28,6 +29,31 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, autoAskAI,
   const partOfSpeech = getPartOfSpeechLabels(entry, targetLanguage).join(" · ");
   const labels = getPopupCopy(targetLanguage);
   const [copied, setCopied] = useState(false);
+  const [isFavorite, setIsFavorite] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    chrome.runtime.sendMessage(
+      { type: MESSAGE_TYPES.VOCABULARY_LIST, payload: undefined },
+      (response: { ok?: boolean; payload?: Array<{ word: string; favorite: boolean }> } | undefined) => {
+        if (cancelled || !response?.ok) return;
+        const match = response.payload?.find((record) => record.word.toLowerCase() === entry.word.toLowerCase());
+        setIsFavorite(match?.favorite ?? false);
+      },
+    );
+    return () => { cancelled = true; };
+  }, [entry.word]);
+
+  function toggleFavorite() {
+    chrome.runtime.sendMessage(
+      { type: MESSAGE_TYPES.VOCABULARY_TOGGLE_FAVORITE, payload: { word: entry.word } },
+      (response: { ok?: boolean; payload?: Array<{ word: string; favorite: boolean }> } | undefined) => {
+        if (!response?.ok) return;
+        const match = response.payload?.find((record) => record.word.toLowerCase() === entry.word.toLowerCase());
+        setIsFavorite(match?.favorite ?? false);
+      },
+    );
+  }
 
   async function copyWord() {
     try {
@@ -160,6 +186,25 @@ export function DictionaryHeader({ entry, onAskAI, aiLoading, aiDone, autoAskAI,
       </div>
 
       <div className="flex shrink-0 items-center gap-1">
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              aria-label={isFavorite ? labels.favoriteRemove : labels.favoriteAdd}
+              aria-pressed={isFavorite}
+              onClick={toggleFavorite}
+            >
+              <Star
+                className={`h-4 w-4 ${isFavorite ? "fill-amber-400 text-amber-400" : ""}`}
+                aria-hidden="true"
+              />
+            </Button>
+          </TooltipTrigger>
+          <TooltipContent>{isFavorite ? labels.favoriteRemove : labels.favoriteAdd}</TooltipContent>
+        </Tooltip>
+
         <Tooltip>
           <TooltipTrigger asChild>
             <Button

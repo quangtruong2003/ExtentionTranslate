@@ -4,20 +4,20 @@
   "version": "1.3.0",
   "description": "Instant English dictionary popup with English, Vietnamese, and Simplified Chinese display plus streaming OpenRouter AI.",
   "minimum_chrome_version": "114",
-  "permissions": [
-    "storage"
-  ],
-  "host_permissions": [
-    "https://api.dictionaryapi.dev/*",
-    "https://freedictionaryapi.com/*",
-    "https://openrouter.ai/*"
-  ],
+  "permissions": ["storage", "contextMenus"],
+  "host_permissions": ["https://api.dictionaryapi.dev/*", "https://freedictionaryapi.com/*", "https://openrouter.ai/*"],
   "background": {
     "service_worker": "background.js",
     "type": "module"
   },
   "action": {
     "default_title": "ExtentionTranslate — Mở cài đặt"
+  },
+  "commands": {
+    "toggle-popup": {
+      "suggested_key": { "default": "Ctrl+Shift+Y" },
+      "description": "Bật/tắt popup tra từ cho vùng chọn hiện tại"
+    }
   },
   "options_ui": {
     "page": "settings.html",

@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { SUPPORTED_TARGET_LANGUAGES, type DictionaryEntry, type ExtensionSettings, type SelectionTriggerMode, type ThemePreference } from "@/shared/types";
+import { getSettingsCopy } from "../locales";
 import { SettingRow } from "../SettingRow";
 
 const PREVIEW_ENTRY: DictionaryEntry = {
@@ -72,35 +73,37 @@ function RadioCardGroup<T extends string>({ name, options, value, onChange }: Ra
   );
 }
 
-const TRIGGER_OPTIONS: ReadonlyArray<RadioOption<SelectionTriggerMode>> = [
-  { value: "icon", label: "Hiện icon cạnh vùng chọn", description: "Bấm icon để mở popup khi bạn cần xem nghĩa." },
-  { value: "popup", label: "Mở popup ngay khi bôi đen", description: "Tra từ ngay lập tức sau khi vùng chọn được xác nhận." },
-  { value: "off", label: "Tắt thao tác khi bôi đen", description: "Không hiện icon hoặc popup trên website." },
-];
-
-const THEME_OPTIONS: ReadonlyArray<RadioOption<ThemePreference>> = [
-  { value: "auto", label: "Tự động (theo hệ thống)", description: "Theo chế độ sáng/tối của máy bạn." },
-  { value: "light", label: "Sáng", description: "Luôn dùng nền sáng." },
-  { value: "dark", label: "Tối", description: "Luôn dùng nền tối." },
-];
-
 interface PopupDictionarySectionProps {
   settings: ExtensionSettings;
   onSettingsChange: (settings: ExtensionSettings) => void;
 }
 
 export function PopupDictionarySection({ settings, onSettingsChange }: PopupDictionarySectionProps) {
+  const copy = getSettingsCopy(settings.targetLanguage);
+
+  const TRIGGER_OPTIONS: ReadonlyArray<RadioOption<SelectionTriggerMode>> = [
+    { value: "icon", label: copy.triggerIconLabel, description: copy.triggerIconDescription },
+    { value: "popup", label: copy.triggerPopupLabel, description: copy.triggerPopupDescription },
+    { value: "off", label: copy.triggerOffLabel, description: copy.triggerOffDescription },
+  ];
+
+  const THEME_OPTIONS: ReadonlyArray<RadioOption<ThemePreference>> = [
+    { value: "auto", label: copy.themeAutoLabel, description: copy.themeAutoDescription },
+    { value: "light", label: copy.themeLightLabel, description: copy.themeLightDescription },
+    { value: "dark", label: copy.themeDarkLabel, description: copy.themeDarkDescription },
+  ];
+
   return (
     <section aria-labelledby="popup-section-title" className="w-full min-w-0 max-w-full space-y-6">
-      <h2 id="popup-section-title" className="sr-only">Popup & Từ điển</h2>
+      <h2 id="popup-section-title" className="sr-only">{copy.popupHeading}</h2>
 
       <Card className="min-w-0 max-w-full">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <MousePointer2 className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            Khi bôi đen văn bản
+            {copy.selectionCardTitle}
           </CardTitle>
-          <CardDescription>Chọn cách tiện ích phản hồi sau khi bạn bôi đen một từ hoặc cụm từ.</CardDescription>
+          <CardDescription>{copy.selectionCardDescription}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0">
           <RadioCardGroup
@@ -116,9 +119,9 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Palette className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            Giao diện & ngôn ngữ
+            {copy.themeCardTitle}
           </CardTitle>
-          <CardDescription>Chọn nền sáng hoặc tối cho popup và trang cài đặt, cùng ngôn ngữ hiển thị kết quả.</CardDescription>
+          <CardDescription>{copy.themeCardDescription}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 space-y-5">
           <RadioCardGroup
@@ -132,15 +135,15 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
             <SettingRow
               id="target-lang"
               icon={Languages}
-              title="Ngôn ngữ hiển thị"
-              description="Kết quả trong tab Từ điển lấy dữ liệu gốc từ dictionaryapi.dev, ưu tiên dịch ngay trên Chrome/Edge; nếu không khả dụng sẽ thử FreeDictionaryAPI.com rồi mới đến OpenRouter."
+              title={copy.languageTitle}
+              description={copy.languageDescription}
             >
               <Select
                 value={settings.targetLanguage}
                 onValueChange={(targetLanguage) => onSettingsChange({ ...settings, targetLanguage: targetLanguage as typeof settings.targetLanguage })}
               >
                 <SelectTrigger id="target-lang" className="w-48 sm:w-56">
-                  <SelectValue placeholder="Chọn ngôn ngữ" />
+                  <SelectValue placeholder={copy.languagePlaceholder} />
                 </SelectTrigger>
                 <SelectContent>
                   {SUPPORTED_TARGET_LANGUAGES.map((language) => (
@@ -157,15 +160,15 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-base">
             <Sparkles className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-            AI trong popup
+            {copy.aiCardTitle}
           </CardTitle>
-          <CardDescription>Điều chỉnh cách tab AI hoạt động khi bạn tra từ.</CardDescription>
+          <CardDescription>{copy.aiCardDescription}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0 divide-y">
           <SettingRow
             id="auto-ask-ai"
-            title="Tự động hỏi AI khi mở popup"
-            description="Mỗi popup mới sẽ hỏi AI một lần nếu đã có OpenRouter API key. Tắt mặc định để tránh phát sinh chi phí ngoài ý muốn."
+            title={copy.autoAskTitle}
+            description={copy.autoAskDescription}
           >
             <Switch
               id="auto-ask-ai"
@@ -175,8 +178,8 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
           </SettingRow>
           <SettingRow
             id="ai-context"
-            title="Gửi ngữ cảnh xung quanh cho AI"
-            description="Khi bật, AI nhận thêm câu đầy đủ và phần văn bản trước/sau vùng bôi đen. Khi tắt, AI chỉ nhận đúng nội dung bạn đã chọn."
+            title={copy.contextTitle}
+            description={copy.contextDescription}
           >
             <Switch
               id="ai-context"
@@ -189,8 +192,8 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
 
       <Card className="min-w-0 max-w-full">
         <CardHeader>
-          <CardTitle className="text-base">Xem trước popup</CardTitle>
-          <CardDescription>Bản xem trước hiển thị theo ngôn ngữ bạn chọn ở trên.</CardDescription>
+          <CardTitle className="text-base">{copy.previewTitle}</CardTitle>
+          <CardDescription>{copy.previewDescription}</CardDescription>
         </CardHeader>
         <CardContent className="min-w-0">
           <div className="w-fit min-w-[340px] max-w-full overflow-x-auto rounded-lg">
@@ -204,6 +207,7 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
               autoAskAI={false}
               activeTab="dictionary"
               targetLanguage={settings.targetLanguage}
+              aiMessages={[]}
               onAskAI={() => {}}
               onOpenSettings={() => {}}
               onTabChange={() => {}}

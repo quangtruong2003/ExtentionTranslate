@@ -7,9 +7,9 @@ const [sectionSource, selectorSource] = await Promise.all([
 ]);
 
 assert.match(sectionSource, /handleCheckKey/, "API keys can be verified inline");
-assert.match(sectionSource, /Kiểm tra key/);
-assert.match(sectionSource, /Key hợp lệ/, "success reports the model count");
-assert.match(sectionSource, /điều khiển ngôn ngữ và cách trả lời của tab AI/, "the prompt description explains both roles");
+assert.match(sectionSource, /checkKey/);
+assert.match(sectionSource, /keyCheckOk/, "success reports the model count");
+assert.match(sectionSource, /systemPromptHint/, "the prompt description explains both roles");
 assert.doesNotMatch(selectorSource, /debounceRef/, "the redundant debounce timer is gone");
 assert.match(selectorSource, /selectedModel/, "the trigger shows the friendly model name");
 

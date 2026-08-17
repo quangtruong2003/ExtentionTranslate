@@ -54,7 +54,7 @@ const declaredModeValues = new Set([
 assert.deepEqual([...declaredModeValues].sort(), [...modes].sort(), "Settings exposes all three trigger mode values");
 
 const labelDeclarations = [
-  ...settingsSource.matchAll(/(?:label|aria-label|title)\s*[:=]\s*["'][^"']+["']/g),
+  ...settingsSource.matchAll(/(?:label|aria-label|title)\s*[:=]\s*(?:["'][^"']+["']|copy\.trigger\w+)/g),
   ...settingsSource.matchAll(/\[\s*["'](?:icon|popup|off)["']\s*,\s*["']([^"']+)["']/g),
 ];
 assert.ok(labelDeclarations.length >= 3, "Settings exposes three user-facing mode labels");
@@ -120,7 +120,8 @@ assert.match(
   "popup mode opens the existing popup",
 );
 
-const offBranch = findModeBranch(selectionFlow, "off");
+const offGuardStart = selectionFlow.indexOf('selectionTriggerMode === "off"');
+const offBranch = selectionFlow.slice(offGuardStart, selectionFlow.indexOf("return;", offGuardStart) + "return;".length);
 assert.match(offBranch, /(?:return|closePopup|clear[A-Za-z]*Trigger)/);
 assert.doesNotMatch(offBranch, /openPopup\s*\(|sendMessage\s*\(/);
 

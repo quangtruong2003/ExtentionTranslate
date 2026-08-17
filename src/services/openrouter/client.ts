@@ -1,5 +1,6 @@
 import { ERROR_CODES, ExtensionError } from "@/shared/errors";
 import { OPENROUTER_ENDPOINT } from "@/shared/constants";
+import { fetchWithRetry } from "@/shared/retry";
 import type { AIExplanation, AIRequest, DictionaryEntry, DictionaryPhrase, TargetLanguage } from "@/shared/types";
 import type { OpenRouterModel, OpenRouterModelsResponse } from "@/shared/openrouter-types";
 import { extractFirstJSONObject } from "@/shared/utils";
@@ -178,7 +179,7 @@ export async function translateDictionaryEntryWithOpenRouter(
   assertConfig(config);
   let response: Response;
   try {
-    response = await fetch(OPENROUTER_ENDPOINT, {
+    response = await fetchWithRetry(OPENROUTER_ENDPOINT, {
       method: "POST",
       signal: config.signal,
       headers: {
@@ -261,7 +262,7 @@ export async function generateDictionaryEntryWithOpenRouter(
   assertConfig(config);
   let response: Response;
   try {
-    response = await fetch(OPENROUTER_ENDPOINT, {
+    response = await fetchWithRetry(OPENROUTER_ENDPOINT, {
       method: "POST",
       signal: config.signal,
       headers: {
@@ -314,7 +315,7 @@ export async function fetchOpenRouterModels(options: FetchModelsOptions): Promis
   const url = `${MODELS_ENDPOINT}?${params.toString()}`;
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await fetchWithRetry(url, {
       method: "GET",
       signal,
       headers: {

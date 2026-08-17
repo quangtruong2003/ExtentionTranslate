@@ -41,6 +41,12 @@ export interface PopupCopy {
   translationFailed: string;
   copyOriginal: string;
   copyTranslation: string;
+  speakTranslation: string;
+  speakOriginal: string;
+  chatPlaceholder: string;
+  chatSend: string;
+  favoriteAdd: string;
+  favoriteRemove: string;
   aiNoResponse: string;
   noDictionaryResult: string;
   askAIForResult: string;
@@ -138,6 +144,12 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     translationFailed: "Translation failed. Please try again.",
     copyOriginal: "Copy original",
     copyTranslation: "Copy translation",
+    speakTranslation: "Read translation aloud",
+    speakOriginal: "Read original aloud",
+    chatPlaceholder: "Ask a follow-up question…",
+    chatSend: "Send",
+    favoriteAdd: "Add to vocabulary",
+    favoriteRemove: "Remove from vocabulary",
     aiNoResponse: "AI has not responded.",
     noDictionaryResult: "No dictionary result was found for this item.",
     askAIForResult: "Ask AI for a result",
@@ -187,6 +199,12 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     translationFailed: "Dịch thất bại. Vui lòng thử lại.",
     copyOriginal: "Sao chép văn bản gốc",
     copyTranslation: "Sao chép bản dịch",
+    speakTranslation: "Đọc bản dịch",
+    speakOriginal: "Đọc văn bản gốc",
+    chatPlaceholder: "Hỏi tiếp một câu…",
+    chatSend: "Gửi",
+    favoriteAdd: "Thêm vào sổ từ vựng",
+    favoriteRemove: "Bỏ khỏi sổ từ vựng",
     aiNoResponse: "AI chưa phản hồi.",
     noDictionaryResult: "Chưa có kết quả tra từ cho mục này.",
     askAIForResult: "Hỏi AI để có kết quả",
@@ -236,6 +254,12 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     translationFailed: "翻译失败，请重试。",
     copyOriginal: "复制原文",
     copyTranslation: "复制译文",
+    speakTranslation: "朗读译文",
+    speakOriginal: "朗读原文",
+    chatPlaceholder: "继续提问…",
+    chatSend: "发送",
+    favoriteAdd: "加入词汇本",
+    favoriteRemove: "从词汇本移除",
     aiNoResponse: "AI 尚未返回结果。",
     noDictionaryResult: "未找到该词的词典结果。",
     askAIForResult: "询问 AI 获取结果",

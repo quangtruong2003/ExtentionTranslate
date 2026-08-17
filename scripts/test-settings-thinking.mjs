@@ -27,8 +27,8 @@ assert.match(openRouterSource, /checked=\{settings\.openRouterThinkingEnabled\}/
 assert.match(openRouterSource, /id="openrouter-reasoning-effort"/);
 assert.match(openRouterSource, /id="openrouter-reasoning-budget"/);
 assert.match(openRouterSource, /id="openrouter-max-output-tokens"/);
-assert.match(openRouterSource, /Mức reasoning/);
-assert.match(openRouterSource, /Reasoning budget/);
-assert.match(openRouterSource, /Max output tokens/);
+assert.match(openRouterSource, /reasoningEffortTitle/);
+assert.match(openRouterSource, /reasoningBudgetLabel/);
+assert.match(openRouterSource, /maxTokensLabel/);
 
 console.log("PASS: thinking setting defaults and migration are stable.");
