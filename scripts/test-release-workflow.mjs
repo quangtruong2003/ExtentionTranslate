@@ -8,6 +8,7 @@ assert.match(workflow, /workflow_dispatch:/, "release workflow must support manu
 assert.match(workflow, /permissions:\s*[\s\S]*contents:\s*write/, "release workflow needs contents write permission");
 assert.match(workflow, /fetch-depth:\s*0/, "release workflow must fetch tags and commit history");
 assert.match(workflow, /actions\/setup-node@v4/, "release workflow must pin Node setup action");
+assert.match(workflow, /node-version:\s*24/, "release workflow must use Node 24 for type-stripping tests");
 assert.match(workflow, /npm ci/, "release workflow must install from the lockfile");
 assert.match(workflow, /scripts\/release-version\.mjs --bump/, "release workflow must classify commit messages");
 assert.match(workflow, /scripts\/release-version\.mjs --apply/, "release workflow must apply the calculated version");
