@@ -1,0 +1,86 @@
+name: Build and Release Extension
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: extension-release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Determine release bump
+        id: bump
+        shell: bash
+        run: echo "bump=$(node scripts/release-version.mjs --bump)" >> "$GITHUB_OUTPUT"
+
+      - name: Apply release version
+        if: steps.bump.outputs.bump != 'none'
+        id: version
+        shell: bash
+        run: echo "version=$(node scripts/release-version.mjs --apply)" >> "$GITHUB_OUTPUT"
+
+      - name: Build extension
+        if: steps.bump.outputs.bump != 'none'
+        run: npm run build
+
+      - name: Test release automation
+        if: steps.bump.outputs.bump != 'none'
+        run: |
+          node --experimental-strip-types scripts/test-release-version.mjs
+          node --experimental-strip-types scripts/test-release-workflow.mjs
+
+      - name: Run full test suite
+        if: steps.bump.outputs.bump != 'none'
+        run: node scripts/run-tests.mjs
+
+      - name: Package extension
+        if: steps.bump.outputs.bump != 'none'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          (cd dist && zip -r "../ExtentionTranslate-v${version}.zip" .)
+
+      - name: Commit version and push release tag
+        if: steps.bump.outputs.bump != 'none'
+        shell: bash
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add package.json public/manifest.json
+          git commit -m "chore(release): v${version} [skip ci]"
+          git tag -a "v${version}" -m "Release v${version}"
+          git push origin HEAD:main --follow-tags
+
+      - name: Publish GitHub Release
+        if: steps.bump.outputs.bump != 'none'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          version="${{ steps.version.outputs.version }}"
+          gh release create "v${version}" "ExtentionTranslate-v${version}.zip" \
+            --verify-tag \
+            --title "ExtentionTranslate v${version}" \
+            --generate-notes
