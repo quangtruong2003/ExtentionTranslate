@@ -13,6 +13,8 @@ Commit dùng Conventional Commits:
 
 Workflow đọc toàn bộ commit từ tag release gần nhất, lấy mức tăng cao nhất, cập nhật đồng bộ `package.json` và `public/manifest.json`, build extension, đóng gói `dist` thành ZIP rồi tạo GitHub Release. Commit tự sinh có `[skip ci]` để không tạo vòng lặp.
 
+Release CI chạy toàn bộ test tự động. `test:content-script` được chạy local trên Windows nơi có Chrome/Edge; trên runner Linux của GitHub Actions, test E2E này được bỏ qua có ghi log vì cần browser executable và môi trường desktop Windows.
+
 Ví dụ:
 
 ```text

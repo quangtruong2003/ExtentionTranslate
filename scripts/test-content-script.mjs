@@ -223,6 +223,7 @@ async function main() {
   if (!existsSync(join(extensionPath, "icons/icon48.png"))) {
     throw new Error("dist/icons/icon48.png is missing; the selection trigger cannot load the project icon.");
   }
+  const browserPath = findBrowser();
 
   const pageServer = createServer((_request, response) => {
     response.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
@@ -234,7 +235,7 @@ async function main() {
 
   const debugPort = await getFreePort();
   const profilePath = mkdtempSync(join(tmpdir(), "extention-translate-e2e-"));
-  const browser = spawn(findBrowser(), [
+  const browser = spawn(browserPath, [
     "--disable-gpu",
     "--no-first-run",
     "--no-default-browser-check",
