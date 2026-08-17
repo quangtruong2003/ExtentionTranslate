@@ -12,6 +12,7 @@ assert.match(workflow, /node-version:\s*24/, "release workflow must use Node 24 
 assert.match(workflow, /npm ci/, "release workflow must install from the lockfile");
 assert.match(workflow, /scripts\/release-version\.mjs --bump/, "release workflow must classify commit messages");
 assert.match(workflow, /scripts\/release-version\.mjs --apply/, "release workflow must apply the calculated version");
+assert.match(workflow, /git add package\.json package-lock\.json public\/manifest\.json/, "release workflow must commit all synchronized version files");
 assert.match(workflow, /if:\s*steps\.bump\.outputs\.bump != 'none'/, "non-release commits must skip publishing");
 assert.match(workflow, /npm run build/, "release workflow must build the extension");
 assert.match(workflow, /scripts\/test-release-version\.mjs/, "release workflow must test version logic");
