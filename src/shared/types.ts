@@ -103,6 +103,8 @@ export type OpenRouterReasoningEffort = "low" | "medium" | "high";
 
 export const OPENROUTER_MAX_OUTPUT_TOKENS = { min: 512, max: 8192, default: 1600 } as const;
 export const OPENROUTER_REASONING_MAX_TOKENS = { min: 1024, max: 8192 } as const;
+export const TOEIC_QUIZ_INTERVAL = { min: 5, max: 120, default: 15 } as const;
+export const TOEIC_QUIZ_QUESTIONS = { min: 3, max: 20, default: 5 } as const;
 
 export type StoredSettings = Partial<Omit<ExtensionSettings, "selectionTriggerMode">> & {
   selectionTriggerMode?: unknown;
@@ -124,6 +126,9 @@ export interface ExtensionSettings {
   openRouterReasoningMaxTokens: number | null;
   openRouterMaxTokens: number;
   systemPrompt: string;
+  toeicQuizEnabled: boolean;
+  toeicQuizIntervalMinutes: number;
+  toeicQuizQuestionCount: number;
 }
 
 export interface PopupSettings {
@@ -175,6 +180,9 @@ Rules:
 - Include 1–3 concise examples.
 - Keep the explanation short (under 120 words).
   - Output JSON only, no prose, no code fences.`,
+  toeicQuizEnabled: false,
+  toeicQuizIntervalMinutes: TOEIC_QUIZ_INTERVAL.default,
+  toeicQuizQuestionCount: TOEIC_QUIZ_QUESTIONS.default,
 };
 
 function isOpenRouterReasoningEffort(value: unknown): value is OpenRouterReasoningEffort {
@@ -205,6 +213,12 @@ export function normalizeSettings(stored: StoredSettings | undefined): Extension
       && requestedReasoningMaxTokens < openRouterMaxTokens
       ? requestedReasoningMaxTokens
       : null;
+  const toeicQuizIntervalMinutes = isIntegerInRange(raw.toeicQuizIntervalMinutes, TOEIC_QUIZ_INTERVAL.min, TOEIC_QUIZ_INTERVAL.max)
+    ? raw.toeicQuizIntervalMinutes
+    : TOEIC_QUIZ_INTERVAL.default;
+  const toeicQuizQuestionCount = isIntegerInRange(raw.toeicQuizQuestionCount, TOEIC_QUIZ_QUESTIONS.min, TOEIC_QUIZ_QUESTIONS.max)
+    ? raw.toeicQuizQuestionCount
+    : TOEIC_QUIZ_QUESTIONS.default;
   const { selectionTriggerMode: _storedMode, showPopupOnSelection: _legacyMode, ...canonicalSettings } = raw;
   return {
     ...DEFAULT_SETTINGS,
@@ -217,6 +231,9 @@ export function normalizeSettings(stored: StoredSettings | undefined): Extension
       : DEFAULT_SETTINGS.openRouterReasoningEffort,
     openRouterReasoningMaxTokens,
     openRouterMaxTokens,
+    toeicQuizEnabled: raw.toeicQuizEnabled === true,
+    toeicQuizIntervalMinutes,
+    toeicQuizQuestionCount,
   };
 }
 
