@@ -11,6 +11,7 @@ import { OpenRouterSection } from "./sections/OpenRouterSection";
 import { OverviewSection } from "./sections/OverviewSection";
 import { PopupDictionarySection } from "./sections/PopupDictionarySection";
 import { ToeicQuizSection } from "./sections/ToeicQuizSection";
+import { ToeicStudySection } from "./sections/ToeicStudySection";
 import { VocabularySection } from "./sections/VocabularySection";
 
 interface MessageResponse<T> {
@@ -214,6 +215,7 @@ export function App() {
             )}
             {activeSection === "vocabulary" && <VocabularySection targetLanguage={settings.targetLanguage} />}
             {activeSection === "toeic" && <ToeicQuizSection settings={settings} onSettingsChange={setSettings} />}
+            {activeSection === "study" && <ToeicStudySection targetLanguage={settings.targetLanguage} />}
             {activeSection === "about" && <AboutSection targetLanguage={settings.targetLanguage} />}
           </div>
         </main>

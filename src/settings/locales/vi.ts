@@ -123,6 +123,8 @@ export const vi: SettingsCopy = {
   aboutDocsLink: "Xem tài liệu dictionaryapi.dev",
   navToeicTitle: "TOEIC Quiz",
   navToeicDescription: "Bài kiểm tra TOEIC Part 5 định kỳ trong lúc duyệt web",
+  navStudyTitle: "Học TOEIC",
+  navStudyDescription: "Flashcard, quiz nghe, từ mỗi ngày và thống kê học tập",
   toeicHeading: "TOEIC Part 5 Quiz",
   toeicEnableTitle: "Bật quiz định kỳ",
   toeicEnableDescription: "Sau một khoảng thời gian duyệt web, một bài quiz sẽ tự động xuất hiện ở giữa màn hình.",

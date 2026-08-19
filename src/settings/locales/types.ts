@@ -138,6 +138,8 @@ export interface SettingsCopy {
   // TOEIC Quiz section
   navToeicTitle: string;
   navToeicDescription: string;
+  navStudyTitle: string;
+  navStudyDescription: string;
   toeicHeading: string;
   toeicEnableTitle: string;
   toeicEnableDescription: string;

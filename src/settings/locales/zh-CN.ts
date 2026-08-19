@@ -123,6 +123,8 @@ export const zhCN: SettingsCopy = {
   aboutDocsLink: "查看 dictionaryapi.dev 文档",
   navToeicTitle: "TOEIC 测验",
   navToeicDescription: "浏览网页时定期进行 TOEIC Part 5 测验",
+  navStudyTitle: "TOEIC 学习",
+  navStudyDescription: "闪卡、听力测验、每日单词与学习统计",
   toeicHeading: "TOEIC Part 5 测验",
   toeicEnableTitle: "启用定期测验",
   toeicEnableDescription: "浏览网页一段时间后，测验会自动出现在屏幕中央。",

@@ -123,6 +123,8 @@ export const en: SettingsCopy = {
   aboutDocsLink: "View dictionaryapi.dev documentation",
   navToeicTitle: "TOEIC Quiz",
   navToeicDescription: "Periodic TOEIC Part 5 quizzes while browsing",
+  navStudyTitle: "TOEIC Study",
+  navStudyDescription: "Flashcards, listening quiz, word of the day, and study stats",
   toeicHeading: "TOEIC Part 5 Quiz",
   toeicEnableTitle: "Enable periodic quiz",
   toeicEnableDescription: "After a period of browsing, a quiz will automatically appear in the center of the screen.",

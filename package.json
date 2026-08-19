@@ -54,6 +54,10 @@
     "test:vocabulary-storage": "node --experimental-strip-types scripts/test-vocabulary-storage.mjs",
     "test:vocabulary-export": "node --experimental-strip-types scripts/test-vocabulary-export.mjs",
     "test:settings-i18n": "node --experimental-strip-types scripts/test-settings-i18n.mjs",
+    "test:toeic-flashcards": "node --experimental-strip-types scripts/test-toeic-flashcards.mjs",
+    "test:toeic-listening": "node --experimental-strip-types scripts/test-toeic-listening.mjs",
+    "test:toeic-stats": "node --experimental-strip-types scripts/test-toeic-stats.mjs",
+    "test:toeic-word-of-day": "node --experimental-strip-types scripts/test-toeic-word-of-day.mjs",
     "preview": "vite preview",
     "postinstall": "node scripts/generate-icons.mjs"
   },

@@ -1,7 +1,7 @@
-import { BookMarked, BookText, GraduationCap, Info, LayoutDashboard, Sparkles, type LucideIcon } from "lucide-react";
+import { BookMarked, BookOpen, BookText, GraduationCap, Info, LayoutDashboard, Sparkles, type LucideIcon } from "lucide-react";
 import type { SettingsCopy } from "./locales";
 
-export type SettingsSectionId = "overview" | "popup" | "openrouter" | "vocabulary" | "toeic" | "about";
+export type SettingsSectionId = "overview" | "popup" | "openrouter" | "vocabulary" | "toeic" | "study" | "about";
 
 export interface SettingsNavigationItem {
   id: SettingsSectionId;
@@ -17,6 +17,7 @@ export function getSettingsNavigation(copy: SettingsCopy): SettingsNavigationIte
     { id: "openrouter", icon: Sparkles, title: copy.navOpenRouterTitle, description: copy.navOpenRouterDescription },
     { id: "vocabulary", icon: BookMarked, title: copy.navVocabularyTitle, description: copy.navVocabularyDescription },
     { id: "toeic", icon: GraduationCap, title: copy.navToeicTitle, description: copy.navToeicDescription },
+    { id: "study", icon: BookOpen, title: copy.navStudyTitle, description: copy.navStudyDescription },
     { id: "about", icon: Info, title: copy.navAboutTitle, description: copy.navAboutDescription },
   ];
 }
