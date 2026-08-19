@@ -6,7 +6,9 @@
   "minimum_chrome_version": "114",
   "permissions": [
     "storage",
-    "contextMenus"
+    "contextMenus",
+    "idle",
+    "alarms"
   ],
   "host_permissions": [
     "https://api.dictionaryapi.dev/*",

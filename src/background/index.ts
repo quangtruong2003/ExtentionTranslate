@@ -6,6 +6,7 @@ import { getSettings, saveSettings } from "@/services/storage/settings";
 import { clearVocabulary, listVocabulary, removeVocabularyEntry, toggleVocabularyFavorite } from "@/services/storage/vocabulary";
 import { runAIStreamOnPort } from "./streaming";
 import { DictionaryRemoteRequestRegistry } from "./remoteRequestRegistry";
+import { handleToeicQuizDone, initToeicQuizController } from "./toeicQuiz";
 import { toPopupSettings, type AIRequest, type AIResponse, type DictionaryRemoteTranslationRequest, type ExtensionSettings, type LookupRequest, type LookupResponse } from "@/shared/types";
 import type { OpenRouterModel } from "@/shared/openrouter-types";
 
@@ -274,6 +275,12 @@ chrome.runtime.onMessage.addListener((envelope: MessageEnvelope, _sender, sendRe
     return true;
   }
 
+  if (type === MESSAGE_TYPES.TOEIC_QUIZ_DONE) {
+    handleToeicQuizDone();
+    sendResponse({ ok: true });
+    return false;
+  }
+
   return false;
 });
 
@@ -315,5 +322,7 @@ chrome.contextMenus?.onClicked.addListener((info, tab) => {
     // The tab's content script may not be injected (e.g. chrome:// pages).
   });
 });
+
+initToeicQuizController();
 
 export {};
