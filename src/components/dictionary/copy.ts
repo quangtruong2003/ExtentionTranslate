@@ -31,6 +31,7 @@ export interface PopupCopy {
   partial: string;
   aiThinking: string;
   thinking: string;
+  stoppedBadge: string;
   generatingResponse: string;
   retry: string;
   originalText: string;
@@ -134,6 +135,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     partial: "Showing dictionary definitions with FreeDictionaryAPI equivalents.",
     aiThinking: "AI is thinking…",
     thinking: "Thinking",
+    stoppedBadge: "Stopped",
     generatingResponse: "Generating response…",
     retry: "Try again",
     originalText: "Original text",
@@ -189,6 +191,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     partial: "Đang hiển thị định nghĩa gốc và tương đương từ FreeDictionaryAPI.",
     aiThinking: "AI đang suy nghĩ…",
     thinking: "Suy luận",
+    stoppedBadge: "Đã dừng",
     generatingResponse: "Đang tạo câu trả lời…",
     retry: "Thử lại",
     originalText: "Văn bản gốc",
@@ -244,6 +247,7 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     partial: "正在显示词典原文，并附上 FreeDictionaryAPI 的对应词。",
     aiThinking: "AI 正在思考…",
     thinking: "思考过程",
+    stoppedBadge: "已停止",
     generatingResponse: "正在生成回答…",
     retry: "重试",
     originalText: "原文",

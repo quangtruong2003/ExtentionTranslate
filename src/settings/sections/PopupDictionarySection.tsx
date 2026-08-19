@@ -203,6 +203,7 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
               aiLoading={false}
               aiRequested={false}
               aiThinkingEnabled={false}
+              aiStopped={false}
               hasApiKey={false}
               autoAskAI={false}
               activeTab="dictionary"

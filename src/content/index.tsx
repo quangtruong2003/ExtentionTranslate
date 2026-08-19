@@ -30,6 +30,7 @@ interface PopupState {
   aiThinkingEnabled: boolean;
   hasApiKey: boolean;
   aiDone: boolean;
+  aiStopped: boolean;
   aiMessages: AIMessage[];
   activeTab: PopupTab;
   targetLanguage: TargetLanguage;
@@ -291,6 +292,7 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
           aiThinkingText={state.aiThinkingText}
           aiThinkingEnabled={state.aiThinkingEnabled}
           aiMessages={state.aiMessages}
+          aiStopped={state.aiStopped}
           hasApiKey={state.hasApiKey}
           autoAskAI={autoAskAI}
           activeTab={state.activeTab}
@@ -506,6 +508,7 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
     aiRequested: false,
     hasApiKey: settings.hasOpenRouterApiKey,
     aiDone: false,
+    aiStopped: false,
     aiMessages: [],
     aiStreamText: "",
     aiThinkingText: "",
@@ -594,6 +597,11 @@ async function translateSelectedText(info: SelectionInfo, sourceText: string, re
 async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
   if (!state || !currentSelectionInfo) return;
   stopAIStream();
+  const isFirstQuestion = state.aiMessages.length === 0;
+  const followUpQuestion = !isFirstQuestion
+    && state.aiMessages[state.aiMessages.length - 1]?.role === "user"
+    ? state.aiMessages[state.aiMessages.length - 1].content
+    : undefined;
   setState({
     ...(revealTab ? { activeTab: "ai" } : {}),
     aiLoading: true,
@@ -603,13 +611,13 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
     aiThinkingText: "",
     aiThinkingEnabled: settings.openRouterThinkingEnabled,
     aiDone: true,
+    aiStopped: false,
+    // Show the user's question right away instead of waiting for the reply.
+    aiMessages: isFirstQuestion
+      ? [{ role: "user" as const, content: state.word }]
+      : state.aiMessages,
   });
   const myId = currentRequestId;
-  const isFirstQuestion = state.aiMessages.length === 0;
-  const followUpQuestion = !isFirstQuestion
-    && state.aiMessages[state.aiMessages.length - 1]?.role === "user"
-    ? state.aiMessages[state.aiMessages.length - 1].content
-    : undefined;
   const req: AIRequest = {
     word: state.word,
     ...(settings.includeSelectionContext ? {
@@ -646,10 +654,7 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
         settled = true;
         batcher.flushNow();
         const assistantMessage: AIMessage = { role: "assistant", content: event.raw };
-        const nextMessages = isFirstQuestion
-          ? [{ role: "user" as const, content: state.word }, assistantMessage]
-          : [...state.aiMessages, assistantMessage];
-        setState({ aiLoading: false, aiStreamText: event.raw, aiThinkingText: event.thinking, aiMessages: nextMessages });
+        setState({ aiLoading: false, aiStreamText: event.raw, aiThinkingText: event.thinking, aiMessages: [...state.aiMessages, assistantMessage] });
       } else {
         settled = true;
         batcher.flushNow();
@@ -845,7 +850,12 @@ function stopKeepWarm() {
 
 function handleStopAI() {
   stopAIStream();
-  if (state) setState({ aiLoading: false });
+  if (!state) return;
+  const partial = state.aiStreamText.trim();
+  const nextMessages = partial
+    ? [...state.aiMessages, { role: "assistant" as const, content: state.aiStreamText }]
+    : state.aiMessages;
+  setState({ aiLoading: false, aiStopped: true, aiMessages: nextMessages });
 }
 
 function handleSendAIMessage(text: string) {

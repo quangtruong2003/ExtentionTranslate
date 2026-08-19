@@ -32,6 +32,7 @@ interface Props {
   aiStreamText?: string;
   aiThinkingText?: string;
   aiThinkingEnabled: boolean;
+  aiStopped: boolean;
   hasApiKey: boolean;
   autoAskAI: boolean;
   activeTab: PopupTab;
@@ -57,6 +58,7 @@ export function DictionaryPopup(props: Props) {
     aiStreamText,
     aiThinkingText,
     aiThinkingEnabled,
+    aiStopped,
     hasApiKey,
     autoAskAI,
     activeTab,
@@ -217,6 +219,7 @@ export function DictionaryPopup(props: Props) {
             streamText={aiStreamText}
             thinkingText={aiThinkingText}
             thinkingEnabled={aiThinkingEnabled}
+            stopped={aiStopped}
             error={aiError}
             messages={aiMessages}
             onRetry={onAskAI}

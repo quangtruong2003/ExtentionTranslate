@@ -23,8 +23,11 @@ assert.match(aiSectionSource, /\{streamText\s*&&\s*\(/);
 assert.match(aiSectionSource, /\{error\s*&&\s*\(/);
 assert.match(aiSectionSource, /getThinkingProgressTitle/);
 assert.match(aiSectionSource, /ext-thinking-progress/);
-assert.match(aiSectionSource, /loading && onStop && !showThinking/);
+assert.match(aiSectionSource, /showThinkingBlock/);
+assert.match(aiSectionSource, /loading \|\| showThinking/);
 assert.match(aiSectionSource, /event\.stopPropagation\(\)/);
+assert.match(aiSectionSource, /stopped && !loading/);
+assert.match(aiSectionSource, /labels\.stoppedBadge/);
 
 const popupStyles = await readFile(new URL("../src/styles/popup.css", import.meta.url), "utf8");
 assert.match(popupStyles, /@keyframes ext-thinking-progress/);
