@@ -4,7 +4,7 @@ import { DictionaryPopup, type PopupPhase } from "@/components/dictionary/Dictio
 import { getPopupCopy } from "@/components/dictionary/copy";
 import { AI_STREAM_PORT_NAME, POPUP_HOST_ID, MESSAGE_TYPES, SELECTION_DEBOUNCE_MS, KEEP_WARM_INTERVAL_MS } from "@/shared/constants";
 import { createStreamBatcher, type StreamBatcher } from "@/shared/streamBatcher";
-import { DEFAULT_POPUP_SETTINGS, normalizeSettings, toPopupSettings, type AIMessage, type AIRequest, type AIStreamEvent, type DictionaryEntry, type DictionaryRemoteTranslationResponse, type LookupResponse, type PopupSettings, type TargetLanguage, type TranslationStatus } from "@/shared/types";
+import { DEFAULT_POPUP_SETTINGS, normalizeSettings, toPopupSettings, type AIRequest, type AIStreamEvent, type DictionaryEntry, type DictionaryRemoteTranslationResponse, type LookupResponse, type PopupSettings, type TargetLanguage, type TranslationStatus } from "@/shared/types";
 import type { PopupTab } from "@/components/dictionary/PopupTabs";
 import { getCurrentSelection, type SelectionInfo } from "./selection";
 import { computePopupPosition, computeSelectionTriggerPosition, constrainPopupSize, getPopupViewport, type Position } from "./positioning";
@@ -31,7 +31,6 @@ interface PopupState {
   hasApiKey: boolean;
   aiDone: boolean;
   aiStopped: boolean;
-  aiMessages: AIMessage[];
   activeTab: PopupTab;
   targetLanguage: TargetLanguage;
   translationStatus: TranslationStatus;
@@ -150,7 +149,6 @@ function render() {
           onOpenSettings={openSettingsPage}
           onLookupWord={handleLookupWord}
           onStop={handleStopAI}
-          onSendMessage={handleSendAIMessage}
           onTabChange={(activeTab) => setState({ activeTab })}
         />
       ) : (
@@ -248,7 +246,7 @@ function SelectionTriggerContainer({ targetLanguage, onActivate }: {
   );
 }
 
-function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettings, onLookupWord, onStop, onSendMessage, onTabChange }: {
+function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettings, onLookupWord, onStop, onTabChange }: {
   state: PopupState;
   autoAskAI: boolean;
   onAskAI: () => void;
@@ -256,7 +254,6 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
   onOpenSettings: () => void;
   onLookupWord: (word: string) => void;
   onStop: () => void;
-  onSendMessage: (text: string) => void;
   onTabChange: (tab: PopupTab) => void;
 }) {
   useLayoutEffect(() => {
@@ -291,7 +288,6 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
           aiStreamText={state.aiStreamText}
           aiThinkingText={state.aiThinkingText}
           aiThinkingEnabled={state.aiThinkingEnabled}
-          aiMessages={state.aiMessages}
           aiStopped={state.aiStopped}
           hasApiKey={state.hasApiKey}
           autoAskAI={autoAskAI}
@@ -304,7 +300,6 @@ function PopupContainer({ state, autoAskAI, onAskAI, onRetryLookup, onOpenSettin
           onOpenSettings={onOpenSettings}
           onLookupWord={onLookupWord}
           onStop={onStop}
-          onSendMessage={onSendMessage}
         />
       </div>
       <Toaster position="bottom-center" richColors closeButton />
@@ -509,7 +504,6 @@ async function openPopup(info: SelectionInfo, shouldAutoAsk: boolean) {
     hasApiKey: settings.hasOpenRouterApiKey,
     aiDone: false,
     aiStopped: false,
-    aiMessages: [],
     aiStreamText: "",
     aiThinkingText: "",
     aiThinkingEnabled: settings.openRouterThinkingEnabled,
@@ -597,11 +591,6 @@ async function translateSelectedText(info: SelectionInfo, sourceText: string, re
 async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
   if (!state || !currentSelectionInfo) return;
   stopAIStream();
-  const isFirstQuestion = state.aiMessages.length === 0;
-  const followUpQuestion = !isFirstQuestion
-    && state.aiMessages[state.aiMessages.length - 1]?.role === "user"
-    ? state.aiMessages[state.aiMessages.length - 1].content
-    : undefined;
   setState({
     ...(revealTab ? { activeTab: "ai" } : {}),
     aiLoading: true,
@@ -612,10 +601,6 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
     aiThinkingEnabled: settings.openRouterThinkingEnabled,
     aiDone: true,
     aiStopped: false,
-    // Show the user's question right away instead of waiting for the reply.
-    aiMessages: isFirstQuestion
-      ? [{ role: "user" as const, content: state.word }]
-      : state.aiMessages,
   });
   const myId = currentRequestId;
   const req: AIRequest = {
@@ -626,10 +611,6 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
       contextAfter: currentSelectionInfo.contextAfter,
       pageLanguage: currentSelectionInfo.pageLanguage,
     } : {}),
-    ...(isFirstQuestion ? {} : {
-      history: state.aiMessages.slice(0, followUpQuestion ? -1 : undefined),
-      followUpQuestion,
-    }),
   };
   try {
     const port = chrome.runtime.connect({ name: AI_STREAM_PORT_NAME });
@@ -653,8 +634,7 @@ async function handleAskAI({ revealTab = true }: { revealTab?: boolean } = {}) {
       } else if (event.type === "done") {
         settled = true;
         batcher.flushNow();
-        const assistantMessage: AIMessage = { role: "assistant", content: event.raw };
-        setState({ aiLoading: false, aiStreamText: event.raw, aiThinkingText: event.thinking, aiMessages: [...state.aiMessages, assistantMessage] });
+        setState({ aiLoading: false, aiStreamText: event.raw, aiThinkingText: event.thinking });
       } else {
         settled = true;
         batcher.flushNow();
@@ -851,18 +831,7 @@ function stopKeepWarm() {
 function handleStopAI() {
   stopAIStream();
   if (!state) return;
-  const partial = state.aiStreamText.trim();
-  const nextMessages = partial
-    ? [...state.aiMessages, { role: "assistant" as const, content: state.aiStreamText }]
-    : state.aiMessages;
-  setState({ aiLoading: false, aiStopped: true, aiMessages: nextMessages });
-}
-
-function handleSendAIMessage(text: string) {
-  const trimmed = text.trim();
-  if (!state || !trimmed || state.aiLoading) return;
-  setState({ aiMessages: [...state.aiMessages, { role: "user", content: trimmed }] });
-  void handleAskAI({ revealTab: false });
+  setState({ aiLoading: false, aiStopped: true });
 }
 
 function addOutsideListeners() {

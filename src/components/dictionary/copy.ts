@@ -44,8 +44,6 @@ export interface PopupCopy {
   copyTranslation: string;
   speakTranslation: string;
   speakOriginal: string;
-  chatPlaceholder: string;
-  chatSend: string;
   favoriteAdd: string;
   favoriteRemove: string;
   aiNoResponse: string;
@@ -148,8 +146,6 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     copyTranslation: "Copy translation",
     speakTranslation: "Read translation aloud",
     speakOriginal: "Read original aloud",
-    chatPlaceholder: "Ask a follow-up question…",
-    chatSend: "Send",
     favoriteAdd: "Add to vocabulary",
     favoriteRemove: "Remove from vocabulary",
     aiNoResponse: "AI has not responded.",
@@ -204,8 +200,6 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     copyTranslation: "Sao chép bản dịch",
     speakTranslation: "Đọc bản dịch",
     speakOriginal: "Đọc văn bản gốc",
-    chatPlaceholder: "Hỏi tiếp một câu…",
-    chatSend: "Gửi",
     favoriteAdd: "Thêm vào sổ từ vựng",
     favoriteRemove: "Bỏ khỏi sổ từ vựng",
     aiNoResponse: "AI chưa phản hồi.",
@@ -260,8 +254,6 @@ const COPY: Record<TargetLanguage, PopupCopy> = {
     copyTranslation: "复制译文",
     speakTranslation: "朗读译文",
     speakOriginal: "朗读原文",
-    chatPlaceholder: "继续提问…",
-    chatSend: "发送",
     favoriteAdd: "加入词汇本",
     favoriteRemove: "从词汇本移除",
     aiNoResponse: "AI 尚未返回结果。",

@@ -208,7 +208,6 @@ export function PopupDictionarySection({ settings, onSettingsChange }: PopupDict
               autoAskAI={false}
               activeTab="dictionary"
               targetLanguage={settings.targetLanguage}
-              aiMessages={[]}
               onAskAI={() => {}}
               onOpenSettings={() => {}}
               onTabChange={() => {}}

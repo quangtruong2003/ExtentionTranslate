@@ -33,7 +33,7 @@
     "test:settings-language": "node --experimental-strip-types scripts/test-settings-language.mjs",
     "test:settings-thinking": "node --experimental-strip-types scripts/test-settings-thinking.mjs",
     "test:auto-ask": "node --experimental-strip-types scripts/test-auto-ask.mjs",
-    "test:ai-chat": "node --experimental-strip-types scripts/test-ai-chat.mjs",
+    "test:ai-request": "node --experimental-strip-types scripts/test-ai-request.mjs",
     "test:adaptive-selection-flow": "node scripts/test-adaptive-selection-flow.mjs",
     "test:selection-trigger": "node --experimental-strip-types scripts/test-selection-trigger.mjs",
     "test:selection-settings-cache": "node --experimental-strip-types scripts/test-selection-settings-cache.mjs",

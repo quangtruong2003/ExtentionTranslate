@@ -10,7 +10,7 @@ import { EmptyState } from "./EmptyState";
 import { AISection } from "./AISection";
 import { PopupTabs, type PopupTab } from "./PopupTabs";
 import { TextTranslationPanel } from "./TextTranslationPanel";
-import type { AIMessage, DictionaryEntry, TargetLanguage, TranslationStatus } from "@/shared/types";
+import type { DictionaryEntry, TargetLanguage, TranslationStatus } from "@/shared/types";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { getPopupCopy } from "./copy";
 
@@ -38,14 +38,12 @@ interface Props {
   activeTab: PopupTab;
   targetLanguage: TargetLanguage;
   translationStatus?: TranslationStatus;
-  aiMessages: AIMessage[];
   onAskAI: () => void;
   onTabChange: (tab: PopupTab) => void;
   onRetryLookup: () => void;
   onOpenSettings: () => void;
   onLookupWord?: (word: string) => void;
   onStop?: () => void;
-  onSendMessage?: (text: string) => void;
 }
 
 export function DictionaryPopup(props: Props) {
@@ -64,14 +62,12 @@ export function DictionaryPopup(props: Props) {
     activeTab,
     targetLanguage,
     translationStatus,
-    aiMessages,
     onAskAI,
     onTabChange,
     onRetryLookup,
     onOpenSettings,
     onLookupWord,
     onStop,
-    onSendMessage,
   } = props;
   const labels = getPopupCopy(targetLanguage);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -221,10 +217,8 @@ export function DictionaryPopup(props: Props) {
             thinkingEnabled={aiThinkingEnabled}
             stopped={aiStopped}
             error={aiError}
-            messages={aiMessages}
             onRetry={onAskAI}
             onStop={onStop}
-            onSendMessage={onSendMessage}
             targetLanguage={targetLanguage}
           />
         </div>

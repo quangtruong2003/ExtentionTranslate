@@ -8,12 +8,10 @@ export interface OpenRouterPromptRequest {
   pageLanguage?: string;
   /** Kept for compatibility with older callers; it is never sent to the AI tab. */
   targetLanguage?: string;
-  history?: Array<{ role: "user" | "assistant"; content: string }>;
-  followUpQuestion?: string;
 }
 
 export interface OpenRouterMessage {
-  role: "system" | "user" | "assistant";
+  role: "system" | "user";
   content: string;
 }
 
@@ -56,11 +54,9 @@ export function buildOpenRouterMessages(
   if (req.contextBefore) userParts.push(`Before context: ${req.contextBefore}`);
   if (req.contextAfter) userParts.push(`After context: ${req.contextAfter}`);
   if (req.pageLanguage) userParts.push(`Page language: ${req.pageLanguage}`);
-  if (req.followUpQuestion) userParts.push(`Follow-up question: ${req.followUpQuestion}`);
 
   return [
     { role: "system", content: systemPrompt },
-    ...(req.history ?? []).map((item): OpenRouterMessage => ({ role: item.role, content: item.content })),
     { role: "user", content: userParts.join("\n") },
   ];
 }
