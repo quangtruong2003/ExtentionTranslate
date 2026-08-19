@@ -18,6 +18,8 @@ import { Toaster, toast } from "@/components/ui/sonner";
 import popupCss from "@/styles/popup.css?inline";
 import sonnerCss from "sonner/dist/styles.css?inline";
 import { classifySelection, detectSelectionSourceLanguage, type BrowserSourceLanguage } from "./selectionMode";
+import { hideToeicQuiz, isToeicQuizVisible, showToeicQuiz } from "./toeic";
+import type { ToeicQuizPayload } from "@/services/toeic/types";
 
 interface PopupState {
   word: string;
@@ -1001,6 +1003,16 @@ function watchSettings() {
   );
 
   chrome.runtime.onMessage.addListener((message: { type?: string; payload?: { mode?: "word" | "text" } }, _sender, sendResponse) => {
+    if (message?.type === MESSAGE_TYPES.SHOW_TOEIC_QUIZ) {
+      if (!isToeicQuizVisible()) {
+        showToeicQuiz(message.payload as unknown as ToeicQuizPayload, settings.targetLanguage, () => {
+          hideToeicQuiz();
+          void sendMessage(MESSAGE_TYPES.TOEIC_QUIZ_DONE, undefined);
+        });
+      }
+      sendResponse({ ok: true });
+      return false;
+    }
     if (message?.type === MESSAGE_TYPES.TOGGLE_POPUP) {
       if (popupWasOpened || selectionTriggerInfo) {
         closePopup();
