@@ -1,6 +1,6 @@
 {
   "name": "extention-translate",
-  "version": "1.7.0",
+  "version": "1.8.0",
   "private": true,
   "description": "Instant English dictionary popup with English, Vietnamese, and Simplified Chinese display plus streaming OpenRouter AI.",
   "type": "module",
