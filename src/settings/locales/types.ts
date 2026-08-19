@@ -134,4 +134,18 @@ export interface SettingsCopy {
   aboutPrivacy: string;
   aboutBrowserSupport: string;
   aboutDocsLink: string;
+
+  // TOEIC Quiz section
+  navToeicTitle: string;
+  navToeicDescription: string;
+  toeicHeading: string;
+  toeicEnableTitle: string;
+  toeicEnableDescription: string;
+  toeicIntervalTitle: string;
+  toeicIntervalDescription: string;
+  toeicIntervalSuffix: string;
+  toeicCountTitle: string;
+  toeicCountDescription: string;
+  toeicCountSuffix: string;
+  toeicTimeNote: string;
 }
