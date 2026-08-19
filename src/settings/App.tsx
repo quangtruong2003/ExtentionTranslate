@@ -101,6 +101,9 @@ export function App() {
       openRouterReasoningMaxTokens: settings.openRouterReasoningMaxTokens,
       openRouterMaxTokens: settings.openRouterMaxTokens,
       systemPrompt: systemPrompt,
+      toeicQuizEnabled: settings.toeicQuizEnabled,
+      toeicQuizIntervalMinutes: settings.toeicQuizIntervalMinutes,
+      toeicQuizQuestionCount: settings.toeicQuizQuestionCount,
     };
   }
 
